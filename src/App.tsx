@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
-import { MapPin, Store, ShoppingBag } from "lucide-react";
+import { MapPin, Store, ShoppingBag, Loader2 } from "lucide-react";
 import { initializeApp } from "firebase/app";
 import {
   getFirestore,
   collection,
   onSnapshot,
   query,
+  addDoc,
 } from "firebase/firestore";
 
 // ==========================================
@@ -17,7 +18,7 @@ const firebaseConfig = {
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 const app = initializeApp(firebaseConfig);
@@ -35,13 +36,20 @@ interface Product {
   stock_quantity: number;
 }
 
-const CATEGORIES = ["Todos", "Brigadeiros", "Bolos", "Caixinhas", "Caixinhas Temáticas", "Combos"];
+const CATEGORIES = [
+  "Todos",
+  "Brigadeiros",
+  "Bolos",
+  "Caixinhas",
+  "Caixinhas Temáticas",
+  "Combos",
+];
 
 export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Inicializa o carrinho buscando do localStorage
   const [cart, setCart] = useState<Record<string, number>>(() => {
     const savedCart = localStorage.getItem("@santo-cacau:cart");
     if (savedCart) {
@@ -58,7 +66,6 @@ export default function App() {
   const [address, setAddress] = useState("");
   const [orderSuccess, setOrderSuccess] = useState(false);
 
-  // Lê os dados do Firebase em Tempo Real
   useEffect(() => {
     const q = query(collection(db, "products"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -69,11 +76,9 @@ export default function App() {
       setProducts(loadedProducts);
       setLoading(false);
     });
-
     return () => unsubscribe();
   }, []);
 
-  // Salva o carrinho no localStorage sempre que mudar
   useEffect(() => {
     localStorage.setItem("@santo-cacau:cart", JSON.stringify(cart));
   }, [cart]);
@@ -88,19 +93,15 @@ export default function App() {
   const updateCart = (productId: string, delta: number) => {
     const product = products.find((p) => p.id === productId);
     if (!product) return;
-
     setCart((prev) => {
       const current = prev[productId] || 0;
       const next = Math.max(0, current + delta);
-
-      // Validação de Estoque
       if (next > product.stock_quantity) {
         alert(
           `Desculpe, temos apenas ${product.stock_quantity} unidades de ${product.name} no momento.`,
         );
         return prev;
       }
-
       if (next === 0) {
         const nextCart = { ...prev };
         delete nextCart[productId];
@@ -110,7 +111,16 @@ export default function App() {
     });
   };
 
-  const handleSendWhatsApp = () => {
+  const cartTotal = useMemo(() => {
+    let total = 0;
+    Object.entries(cart).forEach(([id, qty]) => {
+      const p = products.find((prod) => prod.id === id);
+      if (p) total += p.price * qty;
+    });
+    return total;
+  }, [cart, products]);
+
+  const handleSendWhatsApp = async () => {
     if (!customerName) {
       alert("Por favor, informe seu nome antes de finalizar o pedido!");
       return;
@@ -124,34 +134,55 @@ export default function App() {
       return;
     }
 
-    let text = `Olá, Santo Cacau! Gostaria de fazer um pedido.\n\n`;
-    text += `*Cliente:* ${customerName}\n\n`;
-    text += `*Pedido:*\n`;
+    setIsSubmitting(true);
 
-    let total = 0;
-    Object.entries(cart).forEach(([id, quantity]) => {
-      const product = products.find((p) => p.id === id);
-      if (product) {
-        text += `• ${quantity}x ${product.name} (${formatPrice(product.price)})\n`;
-        total += product.price * quantity;
-      }
+    // 1. Prepara os dados para o Banco de Dados
+    const orderItems = Object.entries(cart).map(([id, quantity]) => {
+      const p = products.find((prod) => prod.id === id);
+      return { id, name: p?.name || "Produto", price: p?.price || 0, quantity };
     });
 
-    text += `\n*Total:* ${formatPrice(total)}\n`;
-    text += `\n*Modalidade:* ${deliveryType === "entrega" ? "Entrega 🛵" : "Retirada 🏪"}\n`;
+    const orderData = {
+      customerName,
+      deliveryType,
+      address: deliveryType === "entrega" ? address : "Retirada na loja",
+      total: cartTotal,
+      status: "Pendente",
+      createdAt: Date.now(),
+      items: orderItems,
+    };
 
-    if (deliveryType === "entrega") {
-      text += `*Endereço:* ${address}\n`;
+    try {
+      // 2. Salva no Firebase
+      await addDoc(collection(db, "orders"), orderData);
+
+      // 3. Monta e envia a mensagem do WhatsApp
+      let text = `Olá, Santo Cacau! Gostaria de fazer um pedido.\n\n`;
+      text += `*Cliente:* ${customerName}\n\n`;
+      text += `*Pedido:*\n`;
+      orderItems.forEach((item) => {
+        text += `• ${item.quantity}x ${item.name} (${formatPrice(item.price)})\n`;
+      });
+      text += `\n*Total:* ${formatPrice(cartTotal)}\n`;
+      text += `\n*Modalidade:* ${deliveryType === "entrega" ? "Entrega 🛵" : "Retirada 🏪"}\n`;
+      if (deliveryType === "entrega") {
+        text += `*Endereço:* ${address}\n`;
+      }
+
+      const phone = "5517997541174";
+      const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+      window.open(whatsappUrl, "_blank");
+
+      // 4. Limpa tudo e mostra sucesso
+      setCart({});
+      setCustomerName("");
+      setAddress("");
+      setOrderSuccess(true);
+    } catch (error) {
+      alert("Houve um erro ao registrar seu pedido. Tente novamente.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const phone = "5517997541174";
-    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
-    window.open(whatsappUrl, "_blank");
-
-    setCart({});
-    setCustomerName("");
-    setAddress("");
-    setOrderSuccess(true);
   };
 
   const filteredProducts =
@@ -159,18 +190,8 @@ export default function App() {
       ? products
       : products.filter((p) => p.category === activeCategory);
 
-  const cartTotal = useMemo(() => {
-    let total = 0;
-    Object.entries(cart).forEach(([id, qty]) => {
-      const p = products.find((prod) => prod.id === id);
-      if (p) total += p.price * qty;
-    });
-    return total;
-  }, [cart, products]);
-
   return (
     <div className="w-full min-h-screen md:h-screen bg-[#F5F2EB] flex flex-col md:overflow-hidden font-sans text-[#2A1610]">
-      {/* Header Minimalista Premium */}
       <header className="h-24 bg-transparent flex items-center justify-between px-6 md:px-12 shrink-0 pt-4">
         <div className="flex items-center gap-4">
           <div className="bg-white p-1 rounded-full shadow-sm">
@@ -192,7 +213,6 @@ export default function App() {
       </header>
 
       <main className="flex-1 flex flex-col md:flex-row md:overflow-hidden p-4 md:p-8 md:pt-4 gap-8 max-w-[1400px] mx-auto w-full">
-        {/* Product Listing */}
         <section className="flex-[2] flex flex-col gap-8 md:overflow-hidden">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0">
             <div>
@@ -203,7 +223,6 @@ export default function App() {
                 Sinta o toque aveludado de cada sabor.
               </p>
             </div>
-
             <div className="flex overflow-x-auto gap-6 pb-2 md:pb-0 scrollbar-hide border-b border-[#B58E38]/20">
               {CATEGORIES.map((cat) => (
                 <button
@@ -246,12 +265,10 @@ export default function App() {
                             {product.description}
                           </p>
                         </div>
-
                         <div className="flex justify-between items-center mt-4">
                           <span className="text-[#B58E38] font-bold text-lg">
                             {formatPrice(product.price)}
                           </span>
-
                           {isOutOfStock ? (
                             <span className="text-[10px] font-bold bg-red-100 text-red-600 px-3 py-1 rounded-full uppercase tracking-wider">
                               Esgotado
@@ -295,10 +312,8 @@ export default function App() {
           </div>
         </section>
 
-        {/* Sidebar / Cart - Dark Chocolate Theme */}
         <aside className="w-full md:w-[380px] lg:w-[420px] shrink-0 bg-[#2A1610] rounded-[32px] shadow-2xl p-6 md:p-8 flex flex-col relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#B58E38] opacity-10 rounded-bl-full pointer-events-none" />
-
           <div className="flex items-center gap-3 mb-8 shrink-0 relative z-10 border-b border-white/10 pb-6">
             <ShoppingBag className="w-6 h-6 text-[#B58E38]" />
             <h2 className="text-2xl font-serif text-white">Sua Seleção</h2>
@@ -317,8 +332,8 @@ export default function App() {
                     Pedido Gerado!
                   </h3>
                   <p className="text-sm text-white/70 leading-relaxed max-w-[250px] mx-auto">
-                    Seu carrinho foi limpo. Finalize os detalhes diretamente no
-                    WhatsApp.
+                    Seu pedido foi registrado. Finalize os detalhes diretamente
+                    no WhatsApp.
                   </p>
                 </div>
                 <button
@@ -364,30 +379,32 @@ export default function App() {
                   placeholder="Nome do Cliente"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-sm focus:border-[#B58E38] outline-none text-white placeholder:text-white/30 transition-all"
+                  disabled={isSubmitting}
+                  className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-sm focus:border-[#B58E38] outline-none text-white placeholder:text-white/30 transition-all disabled:opacity-50"
                 />
-
                 <div className="flex gap-2 bg-white/5 p-1.5 rounded-xl border border-white/5">
                   <button
                     onClick={() => setDeliveryType("entrega")}
+                    disabled={isSubmitting}
                     className={`flex-1 py-2.5 text-[10px] md:text-xs uppercase font-bold rounded-lg transition-all flex items-center justify-center gap-2 shrink-0 ${deliveryType === "entrega" ? "bg-[#B58E38] text-white shadow-md" : "text-white/50 hover:text-white"}`}
                   >
                     <MapPin className="w-3 h-3 md:w-4 md:h-4" /> Entrega
                   </button>
                   <button
                     onClick={() => setDeliveryType("retirada")}
+                    disabled={isSubmitting}
                     className={`flex-1 py-2.5 text-[10px] md:text-xs uppercase font-bold rounded-lg transition-all flex items-center justify-center gap-2 shrink-0 ${deliveryType === "retirada" ? "bg-[#B58E38] text-white shadow-md" : "text-white/50 hover:text-white"}`}
                   >
                     <Store className="w-3 h-3 md:w-4 md:h-4" /> Retirada
                   </button>
                 </div>
-
                 {deliveryType === "entrega" ? (
                   <textarea
                     placeholder="Endereço de Entrega (Rua, Número, Bairro, Complemento)"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-sm h-24 resize-none focus:border-[#B58E38] outline-none text-white placeholder:text-white/30 transition-all"
+                    disabled={isSubmitting}
+                    className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-sm h-24 resize-none focus:border-[#B58E38] outline-none text-white placeholder:text-white/30 transition-all disabled:opacity-50"
                   />
                 ) : (
                   <div className="bg-[#B58E38]/10 rounded-xl p-5 text-xs text-white/80 text-center border border-[#B58E38]/20">
@@ -416,13 +433,21 @@ export default function App() {
               </div>
               <button
                 onClick={handleSendWhatsApp}
-                disabled={Object.keys(cart).length === 0}
+                disabled={Object.keys(cart).length === 0 || isSubmitting}
                 className="w-full bg-[#B58E38] text-white py-4.5 rounded-xl font-bold text-sm shadow-lg hover:bg-[#9E7A2E] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:pointer-events-none"
               >
-                <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                  <path d="M12.012 2c-5.508 0-9.987 4.479-9.987 9.988 0 1.757.459 3.41 1.259 4.85l-1.336 4.88 4.996-1.313c1.408.767 3.013 1.206 4.719 1.206 5.507 0 10.02-4.479 10.02-9.988S17.519 2 12.012 2z" />
-                </svg>
-                Finalizar no WhatsApp
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" /> Registrando...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                      <path d="M12.012 2c-5.508 0-9.987 4.479-9.987 9.988 0 1.757.459 3.41 1.259 4.85l-1.336 4.88 4.996-1.313c1.408.767 3.013 1.206 4.719 1.206 5.507 0 10.02-4.479 10.02-9.988S17.519 2 12.012 2z" />
+                    </svg>{" "}
+                    Finalizar no WhatsApp
+                  </>
+                )}
               </button>
             </div>
           )}
