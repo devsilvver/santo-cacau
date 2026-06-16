@@ -192,7 +192,7 @@ export default function App() {
 
   return (
     <div className="w-full min-h-screen md:h-screen bg-[#F5F2EB] flex flex-col md:overflow-hidden font-sans text-[#2A1610]">
-      <header className="h-24 bg-transparent flex items-center justify-between px-6 md:px-12 shrink-0 pt-4">
+      <header className="h-24 bg-transparent flex items-center px-4 md:px-8 shrink-0 pt-4 max-w-[1400px] mx-auto w-full">
         <div className="flex items-center gap-4">
           <div className="bg-white p-1 rounded-full shadow-sm">
             <img
@@ -201,7 +201,7 @@ export default function App() {
               className="h-14 w-14 object-contain rounded-full"
             />
           </div>
-          <div className="hidden sm:flex flex-col">
+          <div className="flex flex-col">
             <h1 className="text-2xl md:text-3xl font-serif font-bold text-[#2A1610] tracking-tight">
               Santo Cacau
             </h1>
