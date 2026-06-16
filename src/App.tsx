@@ -7,6 +7,7 @@ import {
   Store,
   Trash2,
   Edit2,
+  ShoppingBag,
 } from "lucide-react";
 
 type DeliveryType = "entrega" | "retirada";
@@ -101,7 +102,7 @@ export default function App() {
       description: "Descrição do produto...",
       price: 0,
       category: "Brigadeiros",
-      emoji: "🍫",
+      emoji: "✨",
     };
     setProducts([...products, newProduct]);
     setEditingProduct(newProduct);
@@ -137,7 +138,7 @@ export default function App() {
       return;
     }
 
-    let text = `Olá, gostaria de fazer um pedido!\n\n`;
+    let text = `Olá, Santo Cacau! Gostaria de fazer um pedido.\n\n`;
     text += `*Cliente:* ${customerName}\n\n`;
     text += `*Pedido:*\n`;
 
@@ -145,13 +146,13 @@ export default function App() {
     Object.entries(cart).forEach(([id, quantity]) => {
       const product = products.find((p) => p.id === id);
       if (product) {
-        text += `- ${quantity}x ${product.name} (${formatPrice(product.price)})\n`;
+        text += `• ${quantity}x ${product.name} (${formatPrice(product.price)})\n`;
         total += product.price * quantity;
       }
     });
 
     text += `\n*Total:* ${formatPrice(total)}\n`;
-    text += `\n*Tipo:* ${deliveryType === "entrega" ? "Entrega 🛵" : "Retirada 🏪"}\n`;
+    text += `\n*Modalidade:* ${deliveryType === "entrega" ? "Entrega 🛵" : "Retirada 🏪"}\n`;
 
     if (deliveryType === "entrega") {
       text += `*Endereço:* ${address}\n`;
@@ -182,133 +183,139 @@ export default function App() {
   }, [cart, products]);
 
   return (
-    <div className="w-full min-h-screen md:h-screen bg-[#F4F1EA] flex flex-col md:overflow-hidden font-sans text-[#3D200F]">
-      {/* Header Minimalista */}
-      <header className="h-24 bg-white border-b border-[#B5882D]/20 flex items-center justify-between px-6 md:px-10 shadow-sm shrink-0">
+    <div className="w-full min-h-screen md:h-screen bg-[#F5F2EB] flex flex-col md:overflow-hidden font-sans text-[#2A1610]">
+      {/* Header Minimalista Premium */}
+      <header className="h-24 bg-transparent flex items-center justify-between px-6 md:px-12 shrink-0 pt-4">
         <div className="flex items-center gap-4">
-          <img 
-            src="/logo santo cacau.png" 
-            alt="Logo Santo Cacau" 
-            className="h-16 w-16 object-contain rounded-full shadow-sm"
-          />
-          <div className="flex flex-col hidden sm:flex">
-            <h1 className="text-2xl md:text-3xl font-serif font-bold text-[#3D200F] tracking-tight">
+          <div className="bg-white p-1 rounded-full shadow-sm">
+            <img 
+              src="/logo santo cacau.png" 
+              alt="Logo Santo Cacau" 
+              className="h-14 w-14 object-contain rounded-full"
+            />
+          </div>
+          <div className="hidden sm:flex flex-col">
+            <h1 className="text-2xl md:text-3xl font-serif font-bold text-[#2A1610] tracking-tight">
               Santo Cacau
             </h1>
-            <p className="text-[10px] md:text-xs uppercase tracking-[0.2em] font-medium text-[#B5882D]">
-              Menu de Experiências
+            <p className="text-[10px] md:text-xs uppercase tracking-[0.25em] font-medium text-[#B58E38]">
+              Experiência Única
             </p>
           </div>
         </div>
         
-        <div className="flex gap-2 md:gap-4 items-center">
+        <div className="flex gap-4 items-center">
           <button
             onClick={() => setIsAdmin(!isAdmin)}
-            className={`border px-3 py-2 md:px-4 md:py-2 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 md:gap-2 ${
+            className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
               isAdmin 
-                ? "bg-[#3D200F] text-white border-[#3D200F] hover:bg-[#2A150A]" 
-                : "bg-transparent border-[#B5882D]/50 text-[#B5882D] hover:bg-[#B5882D]/10"
+                ? "bg-[#2A1610] text-white shadow-md hover:bg-[#1A0D09]" 
+                : "bg-white/50 border border-[#B58E38]/30 text-[#B58E38] hover:bg-white"
             }`}
           >
-            <Settings className="w-3 h-3 md:w-4 md:h-4" />
-            {isAdmin ? "Sair" : "Admin"}
+            <Settings className="w-4 h-4" />
+            {isAdmin ? "Sair do Painel" : "Admin"}
           </button>
-          {!isAdmin && (
-            <div className="hidden md:flex items-center gap-2 bg-[#F4F1EA] px-4 py-2 rounded-full border border-[#B5882D]/20">
-              <span className="text-sm font-bold text-[#3D200F]">Aberto</span>
-              <div className="w-2 h-2 rounded-full bg-[#B5882D] animate-pulse"></div>
-            </div>
-          )}
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col md:flex-row md:overflow-hidden p-4 md:p-6 gap-6 max-w-7xl mx-auto w-full">
+      <main className="flex-1 flex flex-col md:flex-row md:overflow-hidden p-4 md:p-8 md:pt-4 gap-8 max-w-[1400px] mx-auto w-full">
         {/* Product Listing */}
-        <section className="flex-[2] flex flex-col gap-6 md:overflow-hidden">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
-            <h2 className="text-2xl font-serif text-[#3D200F]">
-              Nosso Cardápio
-            </h2>
-            <div className="flex overflow-x-auto gap-2 pb-2 md:pb-0 scrollbar-hide">
+        <section className="flex-[2] flex flex-col gap-8 md:overflow-hidden">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0">
+            <div>
+              <h2 className="text-4xl font-serif text-[#2A1610] italic">
+                Menu
+              </h2>
+              <p className="text-[#2A1610]/60 mt-1 text-sm">
+                Sinta o toque aveludado de cada sabor.
+              </p>
+            </div>
+            
+            {/* Elegant Tabs */}
+            <div className="flex overflow-x-auto gap-6 pb-2 md:pb-0 scrollbar-hide border-b border-[#B58E38]/20">
               {CATEGORIES.map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={`px-5 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-300 ${
+                  className={`pb-3 text-sm font-semibold whitespace-nowrap transition-all duration-300 relative ${
                     activeCategory === cat
-                      ? "bg-[#B5882D] text-white shadow-md"
-                      : "bg-white border border-[#B5882D]/20 text-[#3D200F] hover:border-[#B5882D]"
+                      ? "text-[#B58E38]"
+                      : "text-[#2A1610]/50 hover:text-[#2A1610]"
                   }`}
                 >
                   {cat}
+                  {activeCategory === cat && (
+                    <span className="absolute bottom-0 left-0 w-full h-[2px] bg-[#B58E38] rounded-t-full" />
+                  )}
                 </button>
               ))}
             </div>
           </div>
 
           <div className="flex-1 md:overflow-y-auto scrollbar-hide">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-6 md:pb-20">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 pb-6 md:pb-20">
               {filteredProducts.map((product) => (
                 <div
                   key={product.id}
-                  className="bg-white rounded-2xl p-5 flex gap-4 border border-[#B5882D]/10 shadow-sm relative group hover:shadow-md hover:border-[#B5882D]/30 transition-all"
+                  className="bg-white rounded-[20px] p-5 flex gap-5 border border-transparent shadow-[0_4px_20px_-4px_rgba(42,22,16,0.04)] hover:shadow-[0_8px_30px_-4px_rgba(42,22,16,0.08)] hover:border-[#B58E38]/20 transition-all group"
                 >
-                  <div className="w-20 h-20 md:w-24 md:h-24 shrink-0 bg-[#F4F1EA] rounded-xl flex items-center justify-center text-3xl">
+                  <div className="w-20 h-20 md:w-24 md:h-24 shrink-0 bg-[#F5F2EB] rounded-full flex items-center justify-center text-3xl shadow-inner">
                     {product.emoji}
                   </div>
-                  <div className="flex-1 flex flex-col justify-between">
+                  <div className="flex-1 flex flex-col justify-between py-1">
                     <div>
-                      <h3 className="font-serif font-bold text-lg text-[#3D200F]">
+                      <h3 className="font-serif font-bold text-lg text-[#2A1610] group-hover:text-[#B58E38] transition-colors">
                         {product.name}
                       </h3>
-                      <p className="text-xs text-[#3D200F]/60 leading-relaxed mt-1">
+                      <p className="text-xs text-[#2A1610]/60 leading-relaxed mt-1">
                         {product.description}
                       </p>
                     </div>
 
                     {isAdmin ? (
-                      <div className="flex justify-between items-center mt-3">
-                        <span className="text-[#B5882D] font-bold text-lg">
+                      <div className="flex justify-between items-center mt-4">
+                        <span className="text-[#B58E38] font-bold text-lg">
                           {formatPrice(product.price)}
                         </span>
                         <div className="flex gap-2">
                           <button
                             onClick={() => setEditingProduct(product)}
-                            className="text-[#B5882D] hover:bg-[#F4F1EA] p-1.5 rounded-lg transition-colors"
+                            className="text-[#B58E38] hover:bg-[#F5F2EB] p-2 rounded-full transition-colors"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteProduct(product.id)}
-                            className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
+                            className="text-red-400 hover:bg-red-50 p-2 rounded-full transition-colors"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
                     ) : (
-                      <div className="flex justify-between items-end mt-3">
-                        <span className="text-[#B5882D] font-bold text-lg">
+                      <div className="flex justify-between items-center mt-4">
+                        <span className="text-[#B58E38] font-bold text-lg">
                           {formatPrice(product.price)}
                         </span>
-                        <div className="flex items-center bg-[#F4F1EA] rounded-lg p-1 border border-[#B5882D]/10">
+                        <div className="flex items-center bg-[#F5F2EB] rounded-full p-1 border border-[#B58E38]/10">
                           <button
                             onClick={() => updateCart(product.id, -1)}
-                            className="w-7 h-7 flex items-center justify-center rounded hover:bg-white text-[#3D200F] transition-colors disabled:opacity-30"
+                            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white text-[#2A1610] transition-colors disabled:opacity-30"
                             disabled={!cart[product.id]}
                           >
                             -
                           </button>
                           <span
                             className={`w-6 text-center font-mono text-sm ${
-                              cart[product.id] ? "text-[#3D200F] font-bold" : "text-[#3D200F]/40"
+                              cart[product.id] ? "text-[#2A1610] font-bold" : "text-[#2A1610]/40"
                             }`}
                           >
                             {cart[product.id]?.toString().padStart(2, "0") || "00"}
                           </span>
                           <button
                             onClick={() => updateCart(product.id, 1)}
-                            className="w-7 h-7 flex items-center justify-center rounded hover:bg-white text-[#3D200F] transition-colors"
+                            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white text-[#2A1610] transition-colors"
                           >
                             +
                           </button>
@@ -319,31 +326,31 @@ export default function App() {
                 </div>
               ))}
               {filteredProducts.length === 0 && (
-                <div className="col-span-full h-32 flex items-center justify-center text-[#3D200F]/50 font-serif italic">
-                  Nenhum produto encontrado nesta categoria.
+                <div className="col-span-full h-32 flex items-center justify-center text-[#2A1610]/40 font-serif italic text-lg">
+                  Nenhum doce encontrado nesta categoria.
                 </div>
               )}
             </div>
           </div>
 
           {isAdmin && (
-            <div className="mt-auto bg-white p-5 rounded-2xl border border-[#B5882D]/20 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="bg-[#F4F1EA] text-[#B5882D] p-3 rounded-xl">
+            <div className="mt-auto bg-white p-6 rounded-[24px] border border-[#B58E38]/20 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 shadow-sm">
+              <div className="flex items-center gap-4">
+                <div className="bg-[#F5F2EB] text-[#B58E38] p-4 rounded-full">
                   <Settings className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold uppercase text-[#3D200F] tracking-wider">
+                  <p className="text-sm font-bold uppercase text-[#2A1610] tracking-widest">
                     Gerenciamento
                   </p>
-                  <p className="text-xs text-[#3D200F]/60 mt-0.5">
+                  <p className="text-xs text-[#2A1610]/60 mt-1">
                     Adicione, edite e remova produtos do menu.
                   </p>
                 </div>
               </div>
               <button
                 onClick={handleCreateProduct}
-                className="bg-[#3D200F] hover:bg-[#2A150A] text-white px-6 py-3 rounded-xl text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2"
+                className="bg-[#2A1610] hover:bg-[#1A0D09] text-white px-8 py-3.5 rounded-full text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2"
               >
                 <Plus className="w-5 h-5" />
                 Novo Produto
@@ -352,40 +359,46 @@ export default function App() {
           )}
         </section>
 
-        {/* Sidebar / Cart */}
-        <aside className="w-full md:w-80 lg:w-96 shrink-0 bg-white rounded-3xl border border-[#B5882D]/10 shadow-lg p-6 md:p-8 flex flex-col">
-          <h2 className="text-2xl font-serif text-[#3D200F] mb-6 shrink-0 border-b border-[#B5882D]/20 pb-4">
-            Sua Seleção
-          </h2>
+        {/* Sidebar / Cart - Dark Chocolate Theme */}
+        <aside className="w-full md:w-[380px] lg:w-[420px] shrink-0 bg-[#2A1610] rounded-[32px] shadow-2xl p-6 md:p-8 flex flex-col relative overflow-hidden">
+          {/* Decorative element */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#B58E38] opacity-10 rounded-bl-full pointer-events-none" />
 
-          <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-1 mb-6 scrollbar-hide min-h-[200px]">
+          <div className="flex items-center gap-3 mb-8 shrink-0 relative z-10 border-b border-white/10 pb-6">
+            <ShoppingBag className="w-6 h-6 text-[#B58E38]" />
+            <h2 className="text-2xl font-serif text-white">
+              Sua Seleção
+            </h2>
+          </div>
+
+          <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-2 mb-6 scrollbar-hide min-h-[200px] relative z-10">
             {orderSuccess ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center gap-4 text-[#3D200F] animate-in fade-in duration-500">
-                <div className="w-16 h-16 bg-[#25D366]/10 text-[#25D366] rounded-full flex items-center justify-center mb-2">
+              <div className="flex-1 flex flex-col items-center justify-center text-center gap-4 text-white animate-in fade-in duration-500">
+                <div className="w-16 h-16 bg-[#B58E38]/20 text-[#B58E38] rounded-full flex items-center justify-center mb-2">
                   <svg className="w-8 h-8 fill-current" viewBox="0 0 24 24">
                     <path d="M12.012 2c-5.508 0-9.987 4.479-9.987 9.988 0 1.757.459 3.41 1.259 4.85l-1.336 4.88 4.996-1.313c1.408.767 3.013 1.206 4.719 1.206 5.507 0 10.02-4.479 10.02-9.988S17.519 2 12.012 2z" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="font-serif text-xl font-bold mb-1">
-                    Redirecionando!
+                  <h3 className="font-serif text-2xl font-bold mb-2 text-[#B58E38]">
+                    Pedido Gerado!
                   </h3>
-                  <p className="text-sm text-[#3D200F]/70 leading-relaxed">
-                    Seu carrinho foi limpo. Acompanhe o pedido pelo WhatsApp.
+                  <p className="text-sm text-white/70 leading-relaxed max-w-[250px] mx-auto">
+                    Seu carrinho foi limpo. Finalize os detalhes diretamente no WhatsApp.
                   </p>
                 </div>
                 <button
                   onClick={() => setOrderSuccess(false)}
-                  className="mt-4 px-6 py-2 bg-white rounded-xl text-sm font-bold text-[#B5882D] border border-[#B5882D]/30 shadow-sm hover:bg-[#F4F1EA] transition-all"
+                  className="mt-6 px-8 py-3 bg-[#B58E38] rounded-full text-sm font-bold text-white shadow-sm hover:bg-[#9E7A2E] transition-all"
                 >
-                  Novo Pedido
+                  Fazer Novo Pedido
                 </button>
               </div>
             ) : Object.entries(cart).length === 0 ? (
-              <div className="flex-1 flex items-center justify-center text-center text-[#3D200F]/40 text-sm font-serif italic">
-                Seu carrinho está vazio.
+              <div className="flex-1 flex items-center justify-center text-center text-white/30 text-sm font-serif italic">
+                Sua sacola está vazia.
                 <br />
-                Adicione alguns doces!
+                Adicione as nossas delícias!
               </div>
             ) : (
               Object.entries(cart).map(([id, quantity]) => {
@@ -394,15 +407,15 @@ export default function App() {
                 return (
                   <div
                     key={id}
-                    className="flex justify-between items-center text-sm pb-2"
+                    className="flex justify-between items-center text-sm pb-3 border-b border-white/5"
                   >
-                    <span className="text-[#3D200F] flex-1 pr-2 truncate">
-                      <span className="font-mono text-[#B5882D] font-semibold mr-2">
+                    <span className="text-white/90 flex-1 pr-2 truncate">
+                      <span className="font-mono text-[#B58E38] font-bold mr-2">
                         {quantity}x
                       </span>
                       {product.name}
                     </span>
-                    <span className="font-bold text-[#3D200F] whitespace-nowrap">
+                    <span className="font-bold text-[#B58E38] whitespace-nowrap">
                       {formatPrice(product.price * quantity)}
                     </span>
                   </div>
@@ -411,21 +424,22 @@ export default function App() {
             )}
 
             {!orderSuccess && (
-              <div className="mt-auto pt-4 flex flex-col gap-3 shrink-0 border-t border-[#B5882D]/10">
+              <div className="mt-auto pt-6 flex flex-col gap-4 shrink-0">
                 <input
                   type="text"
-                  placeholder="Seu Nome Completo"
+                  placeholder="Nome do Cliente"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="bg-[#F4F1EA] border border-transparent rounded-xl p-3 text-sm focus:border-[#B5882D] focus:bg-white outline-none text-[#3D200F] placeholder:text-[#3D200F]/40 transition-all"
+                  className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-sm focus:border-[#B58E38] outline-none text-white placeholder:text-white/30 transition-all"
                 />
-                <div className="flex gap-2 bg-[#F4F1EA] p-1.5 rounded-xl border border-transparent">
+                
+                <div className="flex gap-2 bg-white/5 p-1.5 rounded-xl border border-white/5">
                   <button
                     onClick={() => setDeliveryType("entrega")}
-                    className={`flex-1 py-2 text-[10px] md:text-xs uppercase font-bold rounded-lg transition-all flex items-center justify-center gap-2 shrink-0 ${
+                    className={`flex-1 py-2.5 text-[10px] md:text-xs uppercase font-bold rounded-lg transition-all flex items-center justify-center gap-2 shrink-0 ${
                       deliveryType === "entrega"
-                        ? "bg-white text-[#B5882D] shadow-sm"
-                        : "text-[#3D200F]/50 hover:text-[#3D200F]"
+                        ? "bg-[#B58E38] text-white shadow-md"
+                        : "text-white/50 hover:text-white"
                     }`}
                   >
                     <MapPin className="w-3 h-3 md:w-4 md:h-4" />
@@ -433,29 +447,31 @@ export default function App() {
                   </button>
                   <button
                     onClick={() => setDeliveryType("retirada")}
-                    className={`flex-1 py-2 text-[10px] md:text-xs uppercase font-bold rounded-lg transition-all flex items-center justify-center gap-2 shrink-0 ${
+                    className={`flex-1 py-2.5 text-[10px] md:text-xs uppercase font-bold rounded-lg transition-all flex items-center justify-center gap-2 shrink-0 ${
                       deliveryType === "retirada"
-                        ? "bg-white text-[#B5882D] shadow-sm"
-                        : "text-[#3D200F]/50 hover:text-[#3D200F]"
+                        ? "bg-[#B58E38] text-white shadow-md"
+                        : "text-white/50 hover:text-white"
                     }`}
                   >
                     <Store className="w-3 h-3 md:w-4 md:h-4" />
                     Retirada
                   </button>
                 </div>
+
                 {deliveryType === "entrega" ? (
                   <textarea
                     placeholder="Endereço de Entrega (Rua, Número, Bairro, Complemento)"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    className="bg-[#F4F1EA] border border-transparent rounded-xl p-3 text-sm h-20 resize-none focus:border-[#B5882D] focus:bg-white outline-none text-[#3D200F] placeholder:text-[#3D200F]/40 transition-all"
+                    className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-sm h-24 resize-none focus:border-[#B58E38] outline-none text-white placeholder:text-white/30 transition-all"
                   />
                 ) : (
-                  <div className="bg-[#F4F1EA] rounded-xl p-4 text-xs text-[#3D200F] text-center border border-[#B5882D]/20">
+                  <div className="bg-[#B58E38]/10 rounded-xl p-5 text-xs text-white/80 text-center border border-[#B58E38]/20">
                     Retirada na nossa loja:
                     <br />
-                    <strong className="font-semibold block mt-1 text-[#B5882D]">
-                      Rua das Rosas, 123 - Centro
+                    <strong className="font-semibold block mt-2 text-[#B58E38] text-sm leading-relaxed">
+                      Rua Rosa Rita dos Santos Sabadotto, 3828<br/>
+                      Monte Verde - Votuporanga SP
                     </strong>
                   </div>
                 )}
@@ -464,54 +480,54 @@ export default function App() {
           </div>
 
           {!orderSuccess && (
-            <div className="pt-2 shrink-0">
-              <div className="flex justify-between items-center mb-6 bg-[#F4F1EA] p-4 rounded-xl">
-                <span className="text-[#3D200F] uppercase text-xs font-bold tracking-widest">
+            <div className="pt-4 shrink-0 relative z-10">
+              <div className="flex justify-between items-end mb-6 bg-white/5 p-5 rounded-xl border border-white/5">
+                <span className="text-white/60 uppercase text-xs font-bold tracking-widest mb-1">
                   Total
                 </span>
-                <span className="text-2xl md:text-3xl font-serif font-bold text-[#B5882D] tracking-tight">
+                <span className="text-3xl font-serif font-bold text-[#B58E38] tracking-tight">
                   {formatPrice(cartTotal)}
                 </span>
               </div>
               <button
                 onClick={handleSendWhatsApp}
                 disabled={Object.keys(cart).length === 0}
-                className="w-full bg-[#25D366] text-white py-4 rounded-xl font-bold text-sm shadow-md hover:shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
+                className="w-full bg-[#B58E38] text-white py-4.5 rounded-xl font-bold text-sm shadow-lg hover:bg-[#9E7A2E] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:pointer-events-none"
               >
                 <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                   <path d="M12.012 2c-5.508 0-9.987 4.479-9.987 9.988 0 1.757.459 3.41 1.259 4.85l-1.336 4.88 4.996-1.313c1.408.767 3.013 1.206 4.719 1.206 5.507 0 10.02-4.479 10.02-9.988S17.519 2 12.012 2z" />
                 </svg>
-                Finalizar Pedido
+                Finalizar no WhatsApp
               </button>
             </div>
           )}
         </aside>
       </main>
 
-      <footer className="h-10 md:h-12 bg-white flex items-center justify-center border-t border-[#B5882D]/20 shrink-0">
-        <p className="text-[9px] md:text-[10px] text-[#3D200F]/60 font-medium tracking-[0.2em] uppercase">
-          Santo Cacau &bull; Menu de Experiências &bull; (17) 99754-1174
+      <footer className="py-6 flex items-center justify-center shrink-0">
+        <p className="text-[10px] text-[#2A1610]/40 font-semibold tracking-[0.2em] uppercase">
+          Santo Cacau &bull; O Sabor da Intensidade &bull; (17) 99754-1174
         </p>
       </footer>
 
-      {/* Edit Product Modal */}
+      {/* Edit Product Modal (Premium Styled) */}
       {editingProduct && (
-        <div className="fixed inset-0 bg-[#3D200F]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-[#B5882D]/20">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="font-serif text-2xl text-[#3D200F]">
-                Editar Produto
+        <div className="fixed inset-0 bg-[#2A1610]/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[32px] p-8 w-full max-w-md shadow-2xl">
+            <div className="flex justify-between items-center mb-8">
+              <h3 className="font-serif text-3xl text-[#2A1610] italic">
+                Editar Doce
               </h3>
               <button
                 onClick={() => setEditingProduct(null)}
-                className="text-[#3D200F]/50 hover:text-[#3D200F] hover:bg-[#F4F1EA] p-2 rounded-full transition-colors"
+                className="text-[#2A1610]/40 hover:text-[#2A1610] hover:bg-[#F5F2EB] p-2 rounded-full transition-colors"
               >
                 ✕
               </button>
             </div>
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-5">
               <div>
-                <label className="block text-xs font-bold uppercase text-[#B5882D] mb-1 tracking-wider">
+                <label className="block text-[10px] font-bold uppercase text-[#B58E38] mb-1.5 tracking-widest">
                   Nome
                 </label>
                 <input
@@ -523,12 +539,12 @@ export default function App() {
                       name: e.target.value,
                     })
                   }
-                  className="w-full bg-[#F4F1EA] border border-transparent rounded-xl p-3 text-sm focus:border-[#B5882D] focus:bg-white outline-none text-[#3D200F]"
+                  className="w-full bg-[#F5F2EB] border border-transparent rounded-xl p-3.5 text-sm focus:border-[#B58E38] focus:bg-white outline-none text-[#2A1610] transition-all"
                 />
               </div>
               <div className="flex gap-4">
                 <div className="flex-1">
-                  <label className="block text-xs font-bold uppercase text-[#B5882D] mb-1 tracking-wider">
+                  <label className="block text-[10px] font-bold uppercase text-[#B58E38] mb-1.5 tracking-widest">
                     Preço (R$)
                   </label>
                   <input
@@ -542,11 +558,11 @@ export default function App() {
                         price: parseFloat(e.target.value) || 0,
                       })
                     }
-                    className="w-full bg-[#F4F1EA] border border-transparent rounded-xl p-3 text-sm focus:border-[#B5882D] focus:bg-white outline-none text-[#3D200F]"
+                    className="w-full bg-[#F5F2EB] border border-transparent rounded-xl p-3.5 text-sm focus:border-[#B58E38] focus:bg-white outline-none text-[#2A1610] transition-all"
                   />
                 </div>
                 <div className="w-24">
-                  <label className="block text-xs font-bold uppercase text-[#B5882D] mb-1 tracking-wider">
+                  <label className="block text-[10px] font-bold uppercase text-[#B58E38] mb-1.5 tracking-widest">
                     Emoji
                   </label>
                   <input
@@ -559,12 +575,12 @@ export default function App() {
                         emoji: e.target.value,
                       })
                     }
-                    className="w-full bg-[#F4F1EA] border border-transparent rounded-xl p-3 text-center text-xl focus:border-[#B5882D] focus:bg-white outline-none text-[#3D200F]"
+                    className="w-full bg-[#F5F2EB] border border-transparent rounded-xl p-3.5 text-center text-xl focus:border-[#B58E38] focus:bg-white outline-none text-[#2A1610] transition-all"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase text-[#B5882D] mb-1 tracking-wider">
+                <label className="block text-[10px] font-bold uppercase text-[#B58E38] mb-1.5 tracking-widest">
                   Categoria
                 </label>
                 <select
@@ -575,7 +591,7 @@ export default function App() {
                       category: e.target.value,
                     })
                   }
-                  className="w-full bg-[#F4F1EA] border border-transparent rounded-xl p-3 text-sm focus:border-[#B5882D] focus:bg-white outline-none text-[#3D200F]"
+                  className="w-full bg-[#F5F2EB] border border-transparent rounded-xl p-3.5 text-sm focus:border-[#B58E38] focus:bg-white outline-none text-[#2A1610] transition-all"
                 >
                   {CATEGORIES.filter((c) => c !== "Todos").map((c) => (
                     <option key={c} value={c}>
@@ -585,7 +601,7 @@ export default function App() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase text-[#B5882D] mb-1 tracking-wider">
+                <label className="block text-[10px] font-bold uppercase text-[#B58E38] mb-1.5 tracking-widest">
                   Descrição
                 </label>
                 <textarea
@@ -596,20 +612,20 @@ export default function App() {
                       description: e.target.value,
                     })
                   }
-                  className="w-full bg-[#F4F1EA] border border-transparent rounded-xl p-3 text-sm h-24 resize-none focus:border-[#B5882D] focus:bg-white outline-none text-[#3D200F]"
+                  className="w-full bg-[#F5F2EB] border border-transparent rounded-xl p-3.5 text-sm h-24 resize-none focus:border-[#B58E38] focus:bg-white outline-none text-[#2A1610] transition-all"
                 />
               </div>
             </div>
-            <div className="mt-8 flex gap-3">
+            <div className="mt-8 flex gap-4">
               <button
                 onClick={() => setEditingProduct(null)}
-                className="flex-1 py-3 bg-[#F4F1EA] text-[#3D200F] rounded-xl font-bold text-sm hover:bg-[#E8E2D5] transition-colors"
+                className="flex-1 py-4 bg-[#F5F2EB] text-[#2A1610] rounded-full font-bold text-sm hover:bg-[#EBE5D8] transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={() => handleSaveEdit(editingProduct)}
-                className="flex-[2] py-3 bg-[#B5882D] text-white rounded-xl font-bold text-sm shadow-md hover:bg-[#967022] transition-colors flex items-center justify-center gap-2"
+                className="flex-[2] py-4 bg-[#2A1610] text-white rounded-full font-bold text-sm shadow-lg hover:bg-[#1A0D09] transition-colors flex items-center justify-center gap-2"
               >
                 <Save className="w-4 h-4" />
                 Salvar Alterações
