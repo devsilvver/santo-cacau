@@ -1,0 +1,6 @@
+{
+  "name": "Santo Cacau",
+  "description": "Cardápio online da Santo Cacau para pedidos e entregas com integração com WhatsApp",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
