@@ -35,7 +35,7 @@ interface Product {
   stock_quantity: number;
 }
 
-const CATEGORIES = ["Todos", "Brigadeiros", "Bolos", "Brownies", "Combos"];
+const CATEGORIES = ["Todos", "Brigadeiros", "Bolos", "Caixinhas", "Caixinhas Temáticas", "Combos"];
 
 export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
