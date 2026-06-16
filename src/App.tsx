@@ -164,7 +164,7 @@ export default function App() {
         text += `• ${item.quantity}x ${item.name} (${formatPrice(item.price)})\n`;
       });
       text += `\n*Total:* ${formatPrice(cartTotal)}\n`;
-      text += `\n*Modalidade:* ${deliveryType === "entrega" ? "Entrega" : "Retirada"}\n`;
+      text += `\n*Modalidade:* ${deliveryType === "entrega" ? "Entrega" : "Retirada na loja"}\n`;
       if (deliveryType === "entrega") {
         text += `*Endereço:* ${address}\n`;
       }
