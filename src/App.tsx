@@ -1,14 +1,27 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { MapPin, Store, ShoppingBag } from "lucide-react";
+import { initializeApp } from "firebase/app";
 import {
-  Settings,
-  Plus,
-  Save,
-  MapPin,
-  Store,
-  Trash2,
-  Edit2,
-  ShoppingBag,
-} from "lucide-react";
+  getFirestore,
+  collection,
+  onSnapshot,
+  query,
+} from "firebase/firestore";
+
+// ==========================================
+// CONFIGURAÇÃO DO FIREBASE (COLE AQUI SUAS CHAVES)
+// ==========================================
+const firebaseConfig = {
+  apiKey: "SUA_API_KEY_AQUI",
+  authDomain: "SEU_PROJETO.firebaseapp.com",
+  projectId: "SEU_PROJETO",
+  storageBucket: "SEU_PROJETO.appspot.com",
+  messagingSenderId: "SEU_MESSAGING_SENDER_ID",
+  appId: "SEU_APP_ID",
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 type DeliveryType = "entrega" | "retirada";
 
@@ -19,61 +32,51 @@ interface Product {
   price: number;
   category: string;
   emoji: string;
+  stock_quantity: number;
 }
-
-const INITIAL_PRODUCTS: Product[] = [
-  {
-    id: "1",
-    name: "Brigadeiro Belga",
-    description: "Chocolate 54% cacau com granulados puros.",
-    price: 4.5,
-    category: "Brigadeiros",
-    emoji: "🍫",
-  },
-  {
-    id: "2",
-    name: "Coxinha Morango",
-    description: "Morango fresco envolto em brigadeiro de ninho.",
-    price: 12.0,
-    category: "Brigadeiros",
-    emoji: "🍓",
-  },
-  {
-    id: "3",
-    name: "Bolo de Pote",
-    description: "Red Velvet com creme cheese frosting leve.",
-    price: 15.0,
-    category: "Bolos",
-    emoji: "🍰",
-  },
-  {
-    id: "4",
-    name: "Combo Degustação",
-    description: "6 unidades sortidas para você se apaixonar.",
-    price: 24.9,
-    category: "Combos",
-    emoji: "🎁",
-  },
-];
 
 const CATEGORIES = ["Todos", "Brigadeiros", "Bolos", "Brownies", "Combos"];
 
 export default function App() {
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
-  const [cart, setCart] = useState<Record<string, number>>({});
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [activeCategory, setActiveCategory] = useState("Todos");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Checkout Info
+  // Inicializa o carrinho buscando do localStorage
+  const [cart, setCart] = useState<Record<string, number>>(() => {
+    const savedCart = localStorage.getItem("@santo-cacau:cart");
+    if (savedCart) {
+      try {
+        return JSON.parse(savedCart);
+      } catch (e) {}
+    }
+    return {};
+  });
+
+  const [activeCategory, setActiveCategory] = useState("Todos");
   const [customerName, setCustomerName] = useState("");
   const [deliveryType, setDeliveryType] = useState<DeliveryType>("entrega");
   const [address, setAddress] = useState("");
-
-  // Admin Info
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-
-  // Success State
   const [orderSuccess, setOrderSuccess] = useState(false);
+
+  // Lê os dados do Firebase em Tempo Real
+  useEffect(() => {
+    const q = query(collection(db, "products"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const loadedProducts: Product[] = [];
+      snapshot.forEach((doc) => {
+        loadedProducts.push({ id: doc.id, ...doc.data() } as Product);
+      });
+      setProducts(loadedProducts);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Salva o carrinho no localStorage sempre que mudar
+  useEffect(() => {
+    localStorage.setItem("@santo-cacau:cart", JSON.stringify(cart));
+  }, [cart]);
 
   const formatPrice = (price: number) => {
     return price.toLocaleString("pt-BR", {
@@ -83,9 +86,21 @@ export default function App() {
   };
 
   const updateCart = (productId: string, delta: number) => {
+    const product = products.find((p) => p.id === productId);
+    if (!product) return;
+
     setCart((prev) => {
       const current = prev[productId] || 0;
       const next = Math.max(0, current + delta);
+
+      // Validação de Estoque
+      if (next > product.stock_quantity) {
+        alert(
+          `Desculpe, temos apenas ${product.stock_quantity} unidades de ${product.name} no momento.`,
+        );
+        return prev;
+      }
+
       if (next === 0) {
         const nextCart = { ...prev };
         delete nextCart[productId];
@@ -93,35 +108,6 @@ export default function App() {
       }
       return { ...prev, [productId]: next };
     });
-  };
-
-  const handleCreateProduct = () => {
-    const newProduct: Product = {
-      id: Date.now().toString(),
-      name: "Novo Produto",
-      description: "Descrição do produto...",
-      price: 0,
-      category: "Brigadeiros",
-      emoji: "✨",
-    };
-    setProducts([...products, newProduct]);
-    setEditingProduct(newProduct);
-  };
-
-  const handleDeleteProduct = (id: string) => {
-    if (confirm("Tem certeza que deseja apagar este produto?")) {
-      setProducts(products.filter((p) => p.id !== id));
-      setCart((prev) => {
-        const nextCart = { ...prev };
-        delete nextCart[id];
-        return nextCart;
-      });
-    }
-  };
-
-  const handleSaveEdit = (edited: Product) => {
-    setProducts(products.map((p) => (p.id === edited.id ? edited : p)));
-    setEditingProduct(null);
   };
 
   const handleSendWhatsApp = () => {
@@ -188,9 +174,9 @@ export default function App() {
       <header className="h-24 bg-transparent flex items-center justify-between px-6 md:px-12 shrink-0 pt-4">
         <div className="flex items-center gap-4">
           <div className="bg-white p-1 rounded-full shadow-sm">
-            <img 
-              src="/logo santo cacau.png" 
-              alt="Logo Santo Cacau" 
+            <img
+              src="/logo santo cacau.png"
+              alt="Logo Santo Cacau"
               className="h-14 w-14 object-contain rounded-full"
             />
           </div>
@@ -202,20 +188,6 @@ export default function App() {
               Experiência Única
             </p>
           </div>
-        </div>
-        
-        <div className="flex gap-4 items-center">
-          <button
-            onClick={() => setIsAdmin(!isAdmin)}
-            className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
-              isAdmin 
-                ? "bg-[#2A1610] text-white shadow-md hover:bg-[#1A0D09]" 
-                : "bg-white/50 border border-[#B58E38]/30 text-[#B58E38] hover:bg-white"
-            }`}
-          >
-            <Settings className="w-4 h-4" />
-            {isAdmin ? "Sair do Painel" : "Admin"}
-          </button>
         </div>
       </header>
 
@@ -231,18 +203,13 @@ export default function App() {
                 Sinta o toque aveludado de cada sabor.
               </p>
             </div>
-            
-            {/* Elegant Tabs */}
+
             <div className="flex overflow-x-auto gap-6 pb-2 md:pb-0 scrollbar-hide border-b border-[#B58E38]/20">
               {CATEGORIES.map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={`pb-3 text-sm font-semibold whitespace-nowrap transition-all duration-300 relative ${
-                    activeCategory === cat
-                      ? "text-[#B58E38]"
-                      : "text-[#2A1610]/50 hover:text-[#2A1610]"
-                  }`}
+                  className={`pb-3 text-sm font-semibold whitespace-nowrap transition-all duration-300 relative ${activeCategory === cat ? "text-[#B58E38]" : "text-[#2A1610]/50 hover:text-[#2A1610]"}`}
                 >
                   {cat}
                   {activeCategory === cat && (
@@ -253,122 +220,88 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex-1 md:overflow-y-auto scrollbar-hide">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 pb-6 md:pb-20">
-              {filteredProducts.map((product) => (
-                <div
-                  key={product.id}
-                  className="bg-white rounded-[20px] p-5 flex gap-5 border border-transparent shadow-[0_4px_20px_-4px_rgba(42,22,16,0.04)] hover:shadow-[0_8px_30px_-4px_rgba(42,22,16,0.08)] hover:border-[#B58E38]/20 transition-all group"
-                >
-                  <div className="w-20 h-20 md:w-24 md:h-24 shrink-0 bg-[#F5F2EB] rounded-full flex items-center justify-center text-3xl shadow-inner">
-                    {product.emoji}
-                  </div>
-                  <div className="flex-1 flex flex-col justify-between py-1">
-                    <div>
-                      <h3 className="font-serif font-bold text-lg text-[#2A1610] group-hover:text-[#B58E38] transition-colors">
-                        {product.name}
-                      </h3>
-                      <p className="text-xs text-[#2A1610]/60 leading-relaxed mt-1">
-                        {product.description}
-                      </p>
-                    </div>
-
-                    {isAdmin ? (
-                      <div className="flex justify-between items-center mt-4">
-                        <span className="text-[#B58E38] font-bold text-lg">
-                          {formatPrice(product.price)}
-                        </span>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => setEditingProduct(product)}
-                            className="text-[#B58E38] hover:bg-[#F5F2EB] p-2 rounded-full transition-colors"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteProduct(product.id)}
-                            className="text-red-400 hover:bg-red-50 p-2 rounded-full transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex justify-between items-center mt-4">
-                        <span className="text-[#B58E38] font-bold text-lg">
-                          {formatPrice(product.price)}
-                        </span>
-                        <div className="flex items-center bg-[#F5F2EB] rounded-full p-1 border border-[#B58E38]/10">
-                          <button
-                            onClick={() => updateCart(product.id, -1)}
-                            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white text-[#2A1610] transition-colors disabled:opacity-30"
-                            disabled={!cart[product.id]}
-                          >
-                            -
-                          </button>
-                          <span
-                            className={`w-6 text-center font-mono text-sm ${
-                              cart[product.id] ? "text-[#2A1610] font-bold" : "text-[#2A1610]/40"
-                            }`}
-                          >
-                            {cart[product.id]?.toString().padStart(2, "0") || "00"}
-                          </span>
-                          <button
-                            onClick={() => updateCart(product.id, 1)}
-                            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white text-[#2A1610] transition-colors"
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-              {filteredProducts.length === 0 && (
-                <div className="col-span-full h-32 flex items-center justify-center text-[#2A1610]/40 font-serif italic text-lg">
-                  Nenhum doce encontrado nesta categoria.
-                </div>
-              )}
-            </div>
-          </div>
-
-          {isAdmin && (
-            <div className="mt-auto bg-white p-6 rounded-[24px] border border-[#B58E38]/20 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 shadow-sm">
-              <div className="flex items-center gap-4">
-                <div className="bg-[#F5F2EB] text-[#B58E38] p-4 rounded-full">
-                  <Settings className="w-6 h-6" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold uppercase text-[#2A1610] tracking-widest">
-                    Gerenciamento
-                  </p>
-                  <p className="text-xs text-[#2A1610]/60 mt-1">
-                    Adicione, edite e remova produtos do menu.
-                  </p>
-                </div>
+          <div className="flex-1 md:overflow-y-auto scrollbar-hide relative">
+            {loading ? (
+              <div className="absolute inset-0 flex items-center justify-center text-[#B58E38] font-serif italic text-xl">
+                Carregando delícias...
               </div>
-              <button
-                onClick={handleCreateProduct}
-                className="bg-[#2A1610] hover:bg-[#1A0D09] text-white px-8 py-3.5 rounded-full text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2"
-              >
-                <Plus className="w-5 h-5" />
-                Novo Produto
-              </button>
-            </div>
-          )}
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 pb-6 md:pb-20">
+                {filteredProducts.map((product) => {
+                  const isOutOfStock = product.stock_quantity <= 0;
+                  return (
+                    <div
+                      key={product.id}
+                      className={`bg-white rounded-[20px] p-5 flex gap-5 border border-transparent shadow-[0_4px_20px_-4px_rgba(42,22,16,0.04)] transition-all group ${isOutOfStock ? "opacity-60 grayscale" : "hover:shadow-[0_8px_30px_-4px_rgba(42,22,16,0.08)] hover:border-[#B58E38]/20"}`}
+                    >
+                      <div className="w-20 h-20 md:w-24 md:h-24 shrink-0 bg-[#F5F2EB] rounded-full flex items-center justify-center text-3xl shadow-inner relative">
+                        {product.emoji}
+                      </div>
+                      <div className="flex-1 flex flex-col justify-between py-1">
+                        <div>
+                          <h3 className="font-serif font-bold text-lg text-[#2A1610] group-hover:text-[#B58E38] transition-colors">
+                            {product.name}
+                          </h3>
+                          <p className="text-xs text-[#2A1610]/60 leading-relaxed mt-1">
+                            {product.description}
+                          </p>
+                        </div>
+
+                        <div className="flex justify-between items-center mt-4">
+                          <span className="text-[#B58E38] font-bold text-lg">
+                            {formatPrice(product.price)}
+                          </span>
+
+                          {isOutOfStock ? (
+                            <span className="text-[10px] font-bold bg-red-100 text-red-600 px-3 py-1 rounded-full uppercase tracking-wider">
+                              Esgotado
+                            </span>
+                          ) : (
+                            <div className="flex items-center bg-[#F5F2EB] rounded-full p-1 border border-[#B58E38]/10">
+                              <button
+                                onClick={() => updateCart(product.id, -1)}
+                                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white text-[#2A1610] transition-colors disabled:opacity-30"
+                                disabled={!cart[product.id]}
+                              >
+                                -
+                              </button>
+                              <span
+                                className={`w-6 text-center font-mono text-sm ${cart[product.id] ? "text-[#2A1610] font-bold" : "text-[#2A1610]/40"}`}
+                              >
+                                {cart[product.id]
+                                  ?.toString()
+                                  .padStart(2, "0") || "00"}
+                              </span>
+                              <button
+                                onClick={() => updateCart(product.id, 1)}
+                                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white text-[#2A1610] transition-colors"
+                              >
+                                +
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {filteredProducts.length === 0 && (
+                  <div className="col-span-full h-32 flex items-center justify-center text-[#2A1610]/40 font-serif italic text-lg">
+                    Nenhum doce encontrado nesta categoria.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </section>
 
         {/* Sidebar / Cart - Dark Chocolate Theme */}
         <aside className="w-full md:w-[380px] lg:w-[420px] shrink-0 bg-[#2A1610] rounded-[32px] shadow-2xl p-6 md:p-8 flex flex-col relative overflow-hidden">
-          {/* Decorative element */}
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#B58E38] opacity-10 rounded-bl-full pointer-events-none" />
 
           <div className="flex items-center gap-3 mb-8 shrink-0 relative z-10 border-b border-white/10 pb-6">
             <ShoppingBag className="w-6 h-6 text-[#B58E38]" />
-            <h2 className="text-2xl font-serif text-white">
-              Sua Seleção
-            </h2>
+            <h2 className="text-2xl font-serif text-white">Sua Seleção</h2>
           </div>
 
           <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-2 mb-6 scrollbar-hide min-h-[200px] relative z-10">
@@ -384,7 +317,8 @@ export default function App() {
                     Pedido Gerado!
                   </h3>
                   <p className="text-sm text-white/70 leading-relaxed max-w-[250px] mx-auto">
-                    Seu carrinho foi limpo. Finalize os detalhes diretamente no WhatsApp.
+                    Seu carrinho foi limpo. Finalize os detalhes diretamente no
+                    WhatsApp.
                   </p>
                 </div>
                 <button
@@ -432,29 +366,19 @@ export default function App() {
                   onChange={(e) => setCustomerName(e.target.value)}
                   className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-sm focus:border-[#B58E38] outline-none text-white placeholder:text-white/30 transition-all"
                 />
-                
+
                 <div className="flex gap-2 bg-white/5 p-1.5 rounded-xl border border-white/5">
                   <button
                     onClick={() => setDeliveryType("entrega")}
-                    className={`flex-1 py-2.5 text-[10px] md:text-xs uppercase font-bold rounded-lg transition-all flex items-center justify-center gap-2 shrink-0 ${
-                      deliveryType === "entrega"
-                        ? "bg-[#B58E38] text-white shadow-md"
-                        : "text-white/50 hover:text-white"
-                    }`}
+                    className={`flex-1 py-2.5 text-[10px] md:text-xs uppercase font-bold rounded-lg transition-all flex items-center justify-center gap-2 shrink-0 ${deliveryType === "entrega" ? "bg-[#B58E38] text-white shadow-md" : "text-white/50 hover:text-white"}`}
                   >
-                    <MapPin className="w-3 h-3 md:w-4 md:h-4" />
-                    Entrega
+                    <MapPin className="w-3 h-3 md:w-4 md:h-4" /> Entrega
                   </button>
                   <button
                     onClick={() => setDeliveryType("retirada")}
-                    className={`flex-1 py-2.5 text-[10px] md:text-xs uppercase font-bold rounded-lg transition-all flex items-center justify-center gap-2 shrink-0 ${
-                      deliveryType === "retirada"
-                        ? "bg-[#B58E38] text-white shadow-md"
-                        : "text-white/50 hover:text-white"
-                    }`}
+                    className={`flex-1 py-2.5 text-[10px] md:text-xs uppercase font-bold rounded-lg transition-all flex items-center justify-center gap-2 shrink-0 ${deliveryType === "retirada" ? "bg-[#B58E38] text-white shadow-md" : "text-white/50 hover:text-white"}`}
                   >
-                    <Store className="w-3 h-3 md:w-4 md:h-4" />
-                    Retirada
+                    <Store className="w-3 h-3 md:w-4 md:h-4" /> Retirada
                   </button>
                 </div>
 
@@ -470,7 +394,8 @@ export default function App() {
                     Retirada na nossa loja:
                     <br />
                     <strong className="font-semibold block mt-2 text-[#B58E38] text-sm leading-relaxed">
-                      Rua Rosa Rita dos Santos Sabadotto, 3828<br/>
+                      Rua Rosa Rita dos Santos Sabadotto, 3828
+                      <br />
                       Monte Verde - Votuporanga SP
                     </strong>
                   </div>
@@ -509,131 +434,6 @@ export default function App() {
           Santo Cacau &bull; O Sabor da Intensidade &bull; (17) 99754-1174
         </p>
       </footer>
-
-      {/* Edit Product Modal (Premium Styled) */}
-      {editingProduct && (
-        <div className="fixed inset-0 bg-[#2A1610]/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[32px] p-8 w-full max-w-md shadow-2xl">
-            <div className="flex justify-between items-center mb-8">
-              <h3 className="font-serif text-3xl text-[#2A1610] italic">
-                Editar Doce
-              </h3>
-              <button
-                onClick={() => setEditingProduct(null)}
-                className="text-[#2A1610]/40 hover:text-[#2A1610] hover:bg-[#F5F2EB] p-2 rounded-full transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="flex flex-col gap-5">
-              <div>
-                <label className="block text-[10px] font-bold uppercase text-[#B58E38] mb-1.5 tracking-widest">
-                  Nome
-                </label>
-                <input
-                  type="text"
-                  value={editingProduct.name}
-                  onChange={(e) =>
-                    setEditingProduct({
-                      ...editingProduct,
-                      name: e.target.value,
-                    })
-                  }
-                  className="w-full bg-[#F5F2EB] border border-transparent rounded-xl p-3.5 text-sm focus:border-[#B58E38] focus:bg-white outline-none text-[#2A1610] transition-all"
-                />
-              </div>
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <label className="block text-[10px] font-bold uppercase text-[#B58E38] mb-1.5 tracking-widest">
-                    Preço (R$)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={editingProduct.price || ""}
-                    onChange={(e) =>
-                      setEditingProduct({
-                        ...editingProduct,
-                        price: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="w-full bg-[#F5F2EB] border border-transparent rounded-xl p-3.5 text-sm focus:border-[#B58E38] focus:bg-white outline-none text-[#2A1610] transition-all"
-                  />
-                </div>
-                <div className="w-24">
-                  <label className="block text-[10px] font-bold uppercase text-[#B58E38] mb-1.5 tracking-widest">
-                    Emoji
-                  </label>
-                  <input
-                    type="text"
-                    maxLength={2}
-                    value={editingProduct.emoji}
-                    onChange={(e) =>
-                      setEditingProduct({
-                        ...editingProduct,
-                        emoji: e.target.value,
-                      })
-                    }
-                    className="w-full bg-[#F5F2EB] border border-transparent rounded-xl p-3.5 text-center text-xl focus:border-[#B58E38] focus:bg-white outline-none text-[#2A1610] transition-all"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold uppercase text-[#B58E38] mb-1.5 tracking-widest">
-                  Categoria
-                </label>
-                <select
-                  value={editingProduct.category}
-                  onChange={(e) =>
-                    setEditingProduct({
-                      ...editingProduct,
-                      category: e.target.value,
-                    })
-                  }
-                  className="w-full bg-[#F5F2EB] border border-transparent rounded-xl p-3.5 text-sm focus:border-[#B58E38] focus:bg-white outline-none text-[#2A1610] transition-all"
-                >
-                  {CATEGORIES.filter((c) => c !== "Todos").map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold uppercase text-[#B58E38] mb-1.5 tracking-widest">
-                  Descrição
-                </label>
-                <textarea
-                  value={editingProduct.description}
-                  onChange={(e) =>
-                    setEditingProduct({
-                      ...editingProduct,
-                      description: e.target.value,
-                    })
-                  }
-                  className="w-full bg-[#F5F2EB] border border-transparent rounded-xl p-3.5 text-sm h-24 resize-none focus:border-[#B58E38] focus:bg-white outline-none text-[#2A1610] transition-all"
-                />
-              </div>
-            </div>
-            <div className="mt-8 flex gap-4">
-              <button
-                onClick={() => setEditingProduct(null)}
-                className="flex-1 py-4 bg-[#F5F2EB] text-[#2A1610] rounded-full font-bold text-sm hover:bg-[#EBE5D8] transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => handleSaveEdit(editingProduct)}
-                className="flex-[2] py-4 bg-[#2A1610] text-white rounded-full font-bold text-sm shadow-lg hover:bg-[#1A0D09] transition-colors flex items-center justify-center gap-2"
-              >
-                <Save className="w-4 h-4" />
-                Salvar Alterações
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
