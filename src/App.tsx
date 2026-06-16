@@ -51,7 +51,7 @@ const INITIAL_PRODUCTS: Product[] = [
     description: "6 unidades sortidas para você se apaixonar.",
     price: 24.9,
     category: "Combos",
-    emoji: "📦",
+    emoji: "🎁",
   },
 ];
 
@@ -157,7 +157,6 @@ export default function App() {
       text += `*Endereço:* ${address}\n`;
     }
 
-    // Número oficial da Santo Cacau
     const phone = "5517997541174";
     const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
     window.open(whatsappUrl, "_blank");
@@ -183,49 +182,62 @@ export default function App() {
   }, [cart, products]);
 
   return (
-    <div className="w-full min-h-screen md:h-screen bg-[#FAF7F0] flex flex-col md:overflow-hidden font-sans text-[#451A03]">
-      <header className="h-24 bg-[#FEF9C3] border-b border-[#EAB308]/20 flex items-center justify-between px-6 md:px-10 shadow-sm shrink-0">
-        <div className="flex flex-col">
-          <h1 className="text-3xl md:text-4xl font-serif font-bold text-[#854D0E] tracking-tight italic">
-            Santo Cacau
-          </h1>
-          <p className="text-[10px] md:text-xs uppercase tracking-[0.2em] font-medium text-[#A16207]">
-            Doces Artesanais & Afeto
-          </p>
+    <div className="w-full min-h-screen md:h-screen bg-[#F4F1EA] flex flex-col md:overflow-hidden font-sans text-[#3D200F]">
+      {/* Header Minimalista */}
+      <header className="h-24 bg-white border-b border-[#B5882D]/20 flex items-center justify-between px-6 md:px-10 shadow-sm shrink-0">
+        <div className="flex items-center gap-4">
+          <img 
+            src="/logo santo cacau.png" 
+            alt="Logo Santo Cacau" 
+            className="h-16 w-16 object-contain rounded-full shadow-sm"
+          />
+          <div className="flex flex-col hidden sm:flex">
+            <h1 className="text-2xl md:text-3xl font-serif font-bold text-[#3D200F] tracking-tight">
+              Santo Cacau
+            </h1>
+            <p className="text-[10px] md:text-xs uppercase tracking-[0.2em] font-medium text-[#B5882D]">
+              Menu de Experiências
+            </p>
+          </div>
         </div>
+        
         <div className="flex gap-2 md:gap-4 items-center">
           <button
             onClick={() => setIsAdmin(!isAdmin)}
-            className={`border px-3 py-2 md:px-4 md:py-2 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-1 md:gap-2 ${isAdmin ? "bg-[#854D0E] text-white border-[#854D0E] hover:bg-[#713F12]" : "bg-white/80 border-[#EAB308] text-[#854D0E] hover:bg-yellow-50"}`}
+            className={`border px-3 py-2 md:px-4 md:py-2 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 md:gap-2 ${
+              isAdmin 
+                ? "bg-[#3D200F] text-white border-[#3D200F] hover:bg-[#2A150A]" 
+                : "bg-transparent border-[#B5882D]/50 text-[#B5882D] hover:bg-[#B5882D]/10"
+            }`}
           >
             <Settings className="w-3 h-3 md:w-4 md:h-4" />
-            {isAdmin ? "Sair Admin" : "Painel Admin"}
+            {isAdmin ? "Sair" : "Admin"}
           </button>
           {!isAdmin && (
-            <div className="hidden md:flex items-center gap-2 bg-[#FDE047] px-4 py-2 rounded-full shadow-sm">
-              <span className="text-sm font-bold">Status: Aberto</span>
-              <div className="w-2 h-2 rounded-full bg-green-600 animate-pulse"></div>
+            <div className="hidden md:flex items-center gap-2 bg-[#F4F1EA] px-4 py-2 rounded-full border border-[#B5882D]/20">
+              <span className="text-sm font-bold text-[#3D200F]">Aberto</span>
+              <div className="w-2 h-2 rounded-full bg-[#B5882D] animate-pulse"></div>
             </div>
           )}
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col md:flex-row md:overflow-hidden p-4 md:p-6 gap-6">
+      <main className="flex-1 flex flex-col md:flex-row md:overflow-hidden p-4 md:p-6 gap-6 max-w-7xl mx-auto w-full">
         {/* Product Listing */}
         <section className="flex-[2] flex flex-col gap-6 md:overflow-hidden">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
-            <h2 className="text-2xl font-serif text-[#713F12]">
-              Cardápio do Dia
+            <h2 className="text-2xl font-serif text-[#3D200F]">
+              Nosso Cardápio
             </h2>
             <div className="flex overflow-x-auto gap-2 pb-2 md:pb-0 scrollbar-hide">
               {CATEGORIES.map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${
+                  className={`px-5 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-300 ${
                     activeCategory === cat
-                      ? "bg-[#EAB308] text-white border border-[#EAB308]"
-                      : "bg-white border border-[#EAB308]/30 text-[#854D0E] hover:bg-yellow-50"
+                      ? "bg-[#B5882D] text-white shadow-md"
+                      : "bg-white border border-[#B5882D]/20 text-[#3D200F] hover:border-[#B5882D]"
                   }`}
                 >
                   {cat}
@@ -239,36 +251,36 @@ export default function App() {
               {filteredProducts.map((product) => (
                 <div
                   key={product.id}
-                  className="bg-white rounded-3xl p-4 flex gap-4 border border-[#EAB308]/20 shadow-sm relative group hover:border-[#EAB308]/50 transition-colors"
+                  className="bg-white rounded-2xl p-5 flex gap-4 border border-[#B5882D]/10 shadow-sm relative group hover:shadow-md hover:border-[#B5882D]/30 transition-all"
                 >
-                  <div className="w-20 h-20 md:w-24 md:h-24 shrink-0 bg-[#FEF3C7] rounded-2xl flex items-center justify-center text-3xl">
+                  <div className="w-20 h-20 md:w-24 md:h-24 shrink-0 bg-[#F4F1EA] rounded-xl flex items-center justify-center text-3xl">
                     {product.emoji}
                   </div>
                   <div className="flex-1 flex flex-col justify-between">
                     <div>
-                      <h3 className="font-bold text-lg text-[#451A03]">
+                      <h3 className="font-serif font-bold text-lg text-[#3D200F]">
                         {product.name}
                       </h3>
-                      <p className="text-xs text-[#713F12]/60 leading-tight mt-1">
+                      <p className="text-xs text-[#3D200F]/60 leading-relaxed mt-1">
                         {product.description}
                       </p>
                     </div>
 
                     {isAdmin ? (
                       <div className="flex justify-between items-center mt-3">
-                        <span className="text-[#854D0E] font-bold">
+                        <span className="text-[#B5882D] font-bold text-lg">
                           {formatPrice(product.price)}
                         </span>
                         <div className="flex gap-2">
                           <button
                             onClick={() => setEditingProduct(product)}
-                            className="text-[#854D0E] hover:bg-yellow-50 p-1.5 rounded-lg border border-[#EAB308]/30"
+                            className="text-[#B5882D] hover:bg-[#F4F1EA] p-1.5 rounded-lg transition-colors"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteProduct(product.id)}
-                            className="text-red-600 hover:bg-red-50 p-1.5 rounded-lg border border-red-200"
+                            className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -276,26 +288,27 @@ export default function App() {
                       </div>
                     ) : (
                       <div className="flex justify-between items-end mt-3">
-                        <span className="text-[#854D0E] font-bold">
+                        <span className="text-[#B5882D] font-bold text-lg">
                           {formatPrice(product.price)}
                         </span>
-                        <div className="flex items-center bg-[#FEF3C7] rounded-lg p-0.5">
+                        <div className="flex items-center bg-[#F4F1EA] rounded-lg p-1 border border-[#B5882D]/10">
                           <button
                             onClick={() => updateCart(product.id, -1)}
-                            className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-[#FDE047] text-[#854D0E] font-bold transition-colors disabled:opacity-50"
+                            className="w-7 h-7 flex items-center justify-center rounded hover:bg-white text-[#3D200F] transition-colors disabled:opacity-30"
                             disabled={!cart[product.id]}
                           >
                             -
                           </button>
                           <span
-                            className={`w-6 text-center font-mono text-sm ${cart[product.id] ? "text-[#854D0E] font-bold" : "text-[#A16207]/40"}`}
+                            className={`w-6 text-center font-mono text-sm ${
+                              cart[product.id] ? "text-[#3D200F] font-bold" : "text-[#3D200F]/40"
+                            }`}
                           >
-                            {cart[product.id]?.toString().padStart(2, "0") ||
-                              "00"}
+                            {cart[product.id]?.toString().padStart(2, "0") || "00"}
                           </span>
                           <button
                             onClick={() => updateCart(product.id, 1)}
-                            className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-[#FDE047] text-[#854D0E] font-bold transition-colors"
+                            className="w-7 h-7 flex items-center justify-center rounded hover:bg-white text-[#3D200F] transition-colors"
                           >
                             +
                           </button>
@@ -306,7 +319,7 @@ export default function App() {
                 </div>
               ))}
               {filteredProducts.length === 0 && (
-                <div className="col-span-full h-32 flex items-center justify-center text-[#713F12]/60 italic">
+                <div className="col-span-full h-32 flex items-center justify-center text-[#3D200F]/50 font-serif italic">
                   Nenhum produto encontrado nesta categoria.
                 </div>
               )}
@@ -314,23 +327,23 @@ export default function App() {
           </div>
 
           {isAdmin && (
-            <div className="mt-auto bg-[#FEF9C3] p-4 rounded-3xl border border-[#EAB308]/30 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 shadow-sm">
+            <div className="mt-auto bg-white p-5 rounded-2xl border border-[#B5882D]/20 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 shadow-sm">
               <div className="flex items-center gap-3">
-                <span className="bg-[#854D0E] text-white p-2 md:p-3 rounded-xl text-lg md:text-xl shrink-0">
-                  🛠️
-                </span>
+                <div className="bg-[#F4F1EA] text-[#B5882D] p-3 rounded-xl">
+                  <Settings className="w-6 h-6" />
+                </div>
                 <div>
-                  <p className="text-sm font-bold uppercase text-[#854D0E]">
+                  <p className="text-sm font-bold uppercase text-[#3D200F] tracking-wider">
                     Gerenciamento
                   </p>
-                  <p className="text-xs text-[#713F12]/70 leading-tight mt-0.5">
-                    Adicione, edite e remova produtos.
+                  <p className="text-xs text-[#3D200F]/60 mt-0.5">
+                    Adicione, edite e remova produtos do menu.
                   </p>
                 </div>
               </div>
               <button
                 onClick={handleCreateProduct}
-                className="bg-[#854D0E] hover:bg-[#713F12] text-white px-5 py-3 rounded-xl text-sm font-bold shadow-md transition-colors flex items-center justify-center gap-2"
+                className="bg-[#3D200F] hover:bg-[#2A150A] text-white px-6 py-3 rounded-xl text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2"
               >
                 <Plus className="w-5 h-5" />
                 Novo Produto
@@ -340,15 +353,15 @@ export default function App() {
         </section>
 
         {/* Sidebar / Cart */}
-        <aside className="w-full md:w-80 lg:w-96 shrink-0 bg-white rounded-[40px] border border-[#EAB308]/10 shadow-xl p-6 md:p-8 flex flex-col">
-          <h2 className="text-2xl font-serif text-[#713F12] mb-6 shrink-0">
-            Seu Carrinho
+        <aside className="w-full md:w-80 lg:w-96 shrink-0 bg-white rounded-3xl border border-[#B5882D]/10 shadow-lg p-6 md:p-8 flex flex-col">
+          <h2 className="text-2xl font-serif text-[#3D200F] mb-6 shrink-0 border-b border-[#B5882D]/20 pb-4">
+            Sua Seleção
           </h2>
 
-          <div className="flex-1 flex flex-col gap-3 overflow-y-auto pr-1 mb-6 scrollbar-hide min-h-[200px]">
+          <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-1 mb-6 scrollbar-hide min-h-[200px]">
             {orderSuccess ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center gap-4 text-[#854D0E] animate-in fade-in duration-500">
-                <div className="w-16 h-16 bg-[#25D366]/20 text-[#25D366] rounded-full flex items-center justify-center mb-2">
+              <div className="flex-1 flex flex-col items-center justify-center text-center gap-4 text-[#3D200F] animate-in fade-in duration-500">
+                <div className="w-16 h-16 bg-[#25D366]/10 text-[#25D366] rounded-full flex items-center justify-center mb-2">
                   <svg className="w-8 h-8 fill-current" viewBox="0 0 24 24">
                     <path d="M12.012 2c-5.508 0-9.987 4.479-9.987 9.988 0 1.757.459 3.41 1.259 4.85l-1.336 4.88 4.996-1.313c1.408.767 3.013 1.206 4.719 1.206 5.507 0 10.02-4.479 10.02-9.988S17.519 2 12.012 2z" />
                   </svg>
@@ -357,19 +370,19 @@ export default function App() {
                   <h3 className="font-serif text-xl font-bold mb-1">
                     Redirecionando!
                   </h3>
-                  <p className="text-sm text-[#713F12]/80 leading-snug">
+                  <p className="text-sm text-[#3D200F]/70 leading-relaxed">
                     Seu carrinho foi limpo. Acompanhe o pedido pelo WhatsApp.
                   </p>
                 </div>
                 <button
                   onClick={() => setOrderSuccess(false)}
-                  className="mt-4 px-6 py-2 bg-white rounded-xl text-sm font-bold text-[#854D0E] border border-[#EAB308]/30 shadow-sm hover:bg-yellow-50 active:scale-95 transition-all"
+                  className="mt-4 px-6 py-2 bg-white rounded-xl text-sm font-bold text-[#B5882D] border border-[#B5882D]/30 shadow-sm hover:bg-[#F4F1EA] transition-all"
                 >
                   Novo Pedido
                 </button>
               </div>
             ) : Object.entries(cart).length === 0 ? (
-              <div className="flex-1 flex items-center justify-center text-center text-[#713F12]/40 text-sm">
+              <div className="flex-1 flex items-center justify-center text-center text-[#3D200F]/40 text-sm font-serif italic">
                 Seu carrinho está vazio.
                 <br />
                 Adicione alguns doces!
@@ -381,15 +394,15 @@ export default function App() {
                 return (
                   <div
                     key={id}
-                    className="flex justify-between items-center text-sm border-b border-dashed border-[#EAB308]/30 pb-3"
+                    className="flex justify-between items-center text-sm pb-2"
                   >
-                    <span className="text-[#451A03] flex-1 pr-2 truncate">
-                      <span className="font-mono text-[#A16207]">
+                    <span className="text-[#3D200F] flex-1 pr-2 truncate">
+                      <span className="font-mono text-[#B5882D] font-semibold mr-2">
                         {quantity}x
-                      </span>{" "}
+                      </span>
                       {product.name}
                     </span>
-                    <span className="font-bold text-[#854D0E] whitespace-nowrap">
+                    <span className="font-bold text-[#3D200F] whitespace-nowrap">
                       {formatPrice(product.price * quantity)}
                     </span>
                   </div>
@@ -398,44 +411,50 @@ export default function App() {
             )}
 
             {!orderSuccess && (
-              <div className="mt-auto pt-4 flex flex-col gap-3 shrink-0">
+              <div className="mt-auto pt-4 flex flex-col gap-3 shrink-0 border-t border-[#B5882D]/10">
                 <input
                   type="text"
                   placeholder="Seu Nome Completo"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="bg-[#FAF7F0] border border-transparent rounded-xl p-3 text-sm focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308] outline-none text-[#451A03] placeholder:text-[#A16207]/40 transition-shadow"
+                  className="bg-[#F4F1EA] border border-transparent rounded-xl p-3 text-sm focus:border-[#B5882D] focus:bg-white outline-none text-[#3D200F] placeholder:text-[#3D200F]/40 transition-all"
                 />
-
-                <div className="flex gap-2 bg-[#FAF7F0] p-1.5 rounded-xl border border-[#EAB308]/10">
+                <div className="flex gap-2 bg-[#F4F1EA] p-1.5 rounded-xl border border-transparent">
                   <button
                     onClick={() => setDeliveryType("entrega")}
-                    className={`flex-1 py-2 text-[10px] md:text-xs uppercase font-bold rounded-lg transition-all flex items-center justify-center gap-1 shrink-0 ${deliveryType === "entrega" ? "bg-white text-[#854D0E] shadow-sm ring-1 ring-[#EAB308]/30" : "text-[#A16207]/60 hover:text-[#854D0E]"}`}
+                    className={`flex-1 py-2 text-[10px] md:text-xs uppercase font-bold rounded-lg transition-all flex items-center justify-center gap-2 shrink-0 ${
+                      deliveryType === "entrega"
+                        ? "bg-white text-[#B5882D] shadow-sm"
+                        : "text-[#3D200F]/50 hover:text-[#3D200F]"
+                    }`}
                   >
                     <MapPin className="w-3 h-3 md:w-4 md:h-4" />
                     Entrega
                   </button>
                   <button
                     onClick={() => setDeliveryType("retirada")}
-                    className={`flex-1 py-2 text-[10px] md:text-xs uppercase font-bold rounded-lg transition-all flex items-center justify-center gap-1 shrink-0 ${deliveryType === "retirada" ? "bg-white text-[#854D0E] shadow-sm ring-1 ring-[#EAB308]/30" : "text-[#A16207]/60 hover:text-[#854D0E]"}`}
+                    className={`flex-1 py-2 text-[10px] md:text-xs uppercase font-bold rounded-lg transition-all flex items-center justify-center gap-2 shrink-0 ${
+                      deliveryType === "retirada"
+                        ? "bg-white text-[#B5882D] shadow-sm"
+                        : "text-[#3D200F]/50 hover:text-[#3D200F]"
+                    }`}
                   >
                     <Store className="w-3 h-3 md:w-4 md:h-4" />
                     Retirada
                   </button>
                 </div>
-
                 {deliveryType === "entrega" ? (
                   <textarea
                     placeholder="Endereço de Entrega (Rua, Número, Bairro, Complemento)"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    className="bg-[#FAF7F0] border border-transparent rounded-xl p-3 text-sm h-20 resize-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308] outline-none text-[#451A03] placeholder:text-[#A16207]/40 transition-shadow"
+                    className="bg-[#F4F1EA] border border-transparent rounded-xl p-3 text-sm h-20 resize-none focus:border-[#B5882D] focus:bg-white outline-none text-[#3D200F] placeholder:text-[#3D200F]/40 transition-all"
                   />
                 ) : (
-                  <div className="bg-[#FEF9C3]/50 border border-[#EAB308]/20 rounded-xl p-3 text-xs text-[#854D0E] text-center">
+                  <div className="bg-[#F4F1EA] rounded-xl p-4 text-xs text-[#3D200F] text-center border border-[#B5882D]/20">
                     Retirada na nossa loja:
                     <br />
-                    <strong className="font-semibold block mt-1">
+                    <strong className="font-semibold block mt-1 text-[#B5882D]">
                       Rua das Rosas, 123 - Centro
                     </strong>
                   </div>
@@ -445,58 +464,54 @@ export default function App() {
           </div>
 
           {!orderSuccess && (
-            <div className="border-t border-[#EAB308]/30 pt-6 shrink-0">
-              <div className="flex justify-between items-center mb-6">
-                <span className="text-[#713F12] opacity-80 uppercase text-xs font-bold tracking-wider">
+            <div className="pt-2 shrink-0">
+              <div className="flex justify-between items-center mb-6 bg-[#F4F1EA] p-4 rounded-xl">
+                <span className="text-[#3D200F] uppercase text-xs font-bold tracking-widest">
                   Total
                 </span>
-                <span className="text-2xl md:text-3xl font-bold text-[#854D0E] tracking-tight">
+                <span className="text-2xl md:text-3xl font-serif font-bold text-[#B5882D] tracking-tight">
                   {formatPrice(cartTotal)}
                 </span>
               </div>
               <button
                 onClick={handleSendWhatsApp}
                 disabled={Object.keys(cart).length === 0}
-                className="w-full bg-[#25D366] text-white py-4 rounded-2xl font-bold text-sm shadow-lg shadow-[#25D366]/20 hover:scale-[1.02] hover:shadow-[#25D366]/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
+                className="w-full bg-[#25D366] text-white py-4 rounded-xl font-bold text-sm shadow-md hover:shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
               >
                 <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                   <path d="M12.012 2c-5.508 0-9.987 4.479-9.987 9.988 0 1.757.459 3.41 1.259 4.85l-1.336 4.88 4.996-1.313c1.408.767 3.013 1.206 4.719 1.206 5.507 0 10.02-4.479 10.02-9.988S17.519 2 12.012 2z" />
                 </svg>
-                Finalizar pelo WhatsApp
+                Finalizar Pedido
               </button>
-              <p className="text-[10px] text-center mt-4 text-[#A16207]/60 leading-tight max-w-[200px] mx-auto">
-                O pedido será enviado formatado para o chat da loja no WhatsApp.
-              </p>
             </div>
           )}
         </aside>
       </main>
 
-      <footer className="h-10 md:h-12 bg-white flex items-center justify-center border-t border-[#EAB308]/20 shrink-0">
-        <p className="text-[9px] md:text-[10px] text-[#A16207] opacity-80 font-medium tracking-widest uppercase">
-          Santo Cacau &bull; O Doce Sabor da Vida &bull; (11) 99999-9999
+      <footer className="h-10 md:h-12 bg-white flex items-center justify-center border-t border-[#B5882D]/20 shrink-0">
+        <p className="text-[9px] md:text-[10px] text-[#3D200F]/60 font-medium tracking-[0.2em] uppercase">
+          Santo Cacau &bull; Menu de Experiências &bull; (17) 99754-1174
         </p>
       </footer>
 
       {/* Edit Product Modal */}
       {editingProduct && (
-        <div className="fixed inset-0 bg-[#451A03]/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[32px] p-6 w-full max-w-md shadow-2xl border border-[#EAB308]/20">
+        <div className="fixed inset-0 bg-[#3D200F]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-[#B5882D]/20">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="font-serif text-xl text-[#713F12]">
+              <h3 className="font-serif text-2xl text-[#3D200F]">
                 Editar Produto
               </h3>
               <button
                 onClick={() => setEditingProduct(null)}
-                className="text-[#A16207] hover:bg-yellow-50 p-2 rounded-full transition-colors"
+                className="text-[#3D200F]/50 hover:text-[#3D200F] hover:bg-[#F4F1EA] p-2 rounded-full transition-colors"
               >
                 ✕
               </button>
             </div>
-
             <div className="flex flex-col gap-4">
               <div>
-                <label className="block text-xs font-bold uppercase text-[#A16207] mb-1">
+                <label className="block text-xs font-bold uppercase text-[#B5882D] mb-1 tracking-wider">
                   Nome
                 </label>
                 <input
@@ -508,13 +523,12 @@ export default function App() {
                       name: e.target.value,
                     })
                   }
-                  className="w-full bg-[#FAF7F0] border border-transparent rounded-xl p-3 text-sm focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308] outline-none text-[#451A03]"
+                  className="w-full bg-[#F4F1EA] border border-transparent rounded-xl p-3 text-sm focus:border-[#B5882D] focus:bg-white outline-none text-[#3D200F]"
                 />
               </div>
-
               <div className="flex gap-4">
                 <div className="flex-1">
-                  <label className="block text-xs font-bold uppercase text-[#A16207] mb-1">
+                  <label className="block text-xs font-bold uppercase text-[#B5882D] mb-1 tracking-wider">
                     Preço (R$)
                   </label>
                   <input
@@ -528,11 +542,11 @@ export default function App() {
                         price: parseFloat(e.target.value) || 0,
                       })
                     }
-                    className="w-full bg-[#FAF7F0] border border-transparent rounded-xl p-3 text-sm focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308] outline-none text-[#451A03]"
+                    className="w-full bg-[#F4F1EA] border border-transparent rounded-xl p-3 text-sm focus:border-[#B5882D] focus:bg-white outline-none text-[#3D200F]"
                   />
                 </div>
                 <div className="w-24">
-                  <label className="block text-xs font-bold uppercase text-[#A16207] mb-1">
+                  <label className="block text-xs font-bold uppercase text-[#B5882D] mb-1 tracking-wider">
                     Emoji
                   </label>
                   <input
@@ -545,13 +559,12 @@ export default function App() {
                         emoji: e.target.value,
                       })
                     }
-                    className="w-full bg-[#FAF7F0] border border-transparent rounded-xl p-3 text-center text-xl focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308] outline-none text-[#451A03]"
+                    className="w-full bg-[#F4F1EA] border border-transparent rounded-xl p-3 text-center text-xl focus:border-[#B5882D] focus:bg-white outline-none text-[#3D200F]"
                   />
                 </div>
               </div>
-
               <div>
-                <label className="block text-xs font-bold uppercase text-[#A16207] mb-1">
+                <label className="block text-xs font-bold uppercase text-[#B5882D] mb-1 tracking-wider">
                   Categoria
                 </label>
                 <select
@@ -562,7 +575,7 @@ export default function App() {
                       category: e.target.value,
                     })
                   }
-                  className="w-full bg-[#FAF7F0] border border-transparent rounded-xl p-3 text-sm focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308] outline-none text-[#451A03]"
+                  className="w-full bg-[#F4F1EA] border border-transparent rounded-xl p-3 text-sm focus:border-[#B5882D] focus:bg-white outline-none text-[#3D200F]"
                 >
                   {CATEGORIES.filter((c) => c !== "Todos").map((c) => (
                     <option key={c} value={c}>
@@ -571,9 +584,8 @@ export default function App() {
                   ))}
                 </select>
               </div>
-
               <div>
-                <label className="block text-xs font-bold uppercase text-[#A16207] mb-1">
+                <label className="block text-xs font-bold uppercase text-[#B5882D] mb-1 tracking-wider">
                   Descrição
                 </label>
                 <textarea
@@ -584,21 +596,20 @@ export default function App() {
                       description: e.target.value,
                     })
                   }
-                  className="w-full bg-[#FAF7F0] border border-transparent rounded-xl p-3 text-sm h-20 resize-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308] outline-none text-[#451A03]"
+                  className="w-full bg-[#F4F1EA] border border-transparent rounded-xl p-3 text-sm h-24 resize-none focus:border-[#B5882D] focus:bg-white outline-none text-[#3D200F]"
                 />
               </div>
             </div>
-
             <div className="mt-8 flex gap-3">
               <button
                 onClick={() => setEditingProduct(null)}
-                className="flex-1 py-3 bg-gray-100 text-[#713F12] rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors"
+                className="flex-1 py-3 bg-[#F4F1EA] text-[#3D200F] rounded-xl font-bold text-sm hover:bg-[#E8E2D5] transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={() => handleSaveEdit(editingProduct)}
-                className="flex-[2] py-3 bg-[#EAB308] text-white rounded-xl font-bold text-sm shadow-md hover:bg-[#CA8A04] transition-colors flex items-center justify-center gap-2"
+                className="flex-[2] py-3 bg-[#B5882D] text-white rounded-xl font-bold text-sm shadow-md hover:bg-[#967022] transition-colors flex items-center justify-center gap-2"
               >
                 <Save className="w-4 h-4" />
                 Salvar Alterações
