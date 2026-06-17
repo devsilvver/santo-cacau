@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { MapPin, Store, ShoppingBag } from "lucide-react";
+import { MapPin, Store, ShoppingBag, X, ChevronDown } from "lucide-react";
 import { initializeApp } from "firebase/app";
 import {
   getFirestore,
@@ -32,7 +32,7 @@ interface Product {
   price: number;
   category: string;
   imageUrl?: string;
-  emoji?: string; // Para compatibilidade com produtos antigos
+  emoji?: string;
 }
 
 const CATEGORIES = [
@@ -47,6 +47,9 @@ const CATEGORIES = [
 export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Controle do Modal do Carrinho no Mobile
+  const [isCartMobileOpen, setIsCartMobileOpen] = useState(false);
 
   const [cart, setCart] = useState<Record<string, number>>(() => {
     const savedCart = localStorage.getItem("@santo-cacau:cart");
@@ -156,8 +159,21 @@ export default function App() {
     return total;
   }, [cart, products]);
 
+  const cartItemsCount = useMemo(() => {
+    return Object.values(cart).reduce((sum, qty) => sum + qty, 0);
+  }, [cart]);
+
   return (
-    <div className="w-full min-h-screen md:h-screen bg-[#F5F2EB] flex flex-col md:overflow-hidden font-sans text-[#2A1610]">
+    <div className="w-full min-h-screen md:h-screen bg-[#F5F2EB] flex flex-col md:overflow-hidden font-sans text-[#2A1610] relative">
+      {/* Overlay Escuro para fechar o carrinho no mobile */}
+      {isCartMobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden transition-opacity"
+          onClick={() => setIsCartMobileOpen(false)}
+        />
+      )}
+
+      {/* HEADER */}
       <header className="h-24 bg-transparent flex items-center px-4 md:px-8 shrink-0 pt-4 max-w-[1400px] mx-auto w-full">
         <div className="flex items-center gap-4">
           <div className="bg-white p-1 rounded-full shadow-sm">
@@ -179,7 +195,8 @@ export default function App() {
       </header>
 
       <main className="flex-1 flex flex-col md:flex-row md:overflow-hidden p-4 md:p-8 md:pt-4 gap-8 max-w-[1400px] mx-auto w-full">
-        <section className="flex-[2] flex flex-col gap-8 md:overflow-hidden">
+        {/* SEÇÃO PRODUTOS */}
+        <section className="flex-[2] flex flex-col gap-6 md:gap-8 md:overflow-hidden">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0">
             <div>
               <h2 className="text-4xl font-serif text-[#2A1610] italic">
@@ -189,7 +206,28 @@ export default function App() {
                 Sinta o toque aveludado de cada sabor.
               </p>
             </div>
-            <div className="flex overflow-x-auto gap-6 pb-2 md:pb-0 scrollbar-hide border-b border-[#B58E38]/20">
+
+            {/* Menu Suspenso (Dropdown) - APENAS MOBILE */}
+            <div className="w-full md:hidden relative mt-2">
+              <select
+                value={activeCategory}
+                onChange={(e) => setActiveCategory(e.target.value)}
+                className="w-full appearance-none bg-white border border-[#B58E38]/20 text-[#2A1610] py-3.5 px-5 rounded-2xl font-bold shadow-sm focus:outline-none focus:border-[#B58E38] transition-all"
+              >
+                {CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                className="absolute right-5 top-1/2 -translate-y-1/2 text-[#B58E38] pointer-events-none"
+                size={20}
+              />
+            </div>
+
+            {/* Menu Horizontal - APENAS DESKTOP */}
+            <div className="hidden md:flex overflow-x-auto gap-6 pb-2 md:pb-0 scrollbar-hide border-b border-[#B58E38]/20">
               {CATEGORIES.map((cat) => (
                 <button
                   key={cat}
@@ -211,7 +249,7 @@ export default function App() {
                 Carregando delícias...
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 pb-6 md:pb-20">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 pb-32 md:pb-20">
                 {filteredProducts.map((product) => (
                   <div
                     key={product.id}
@@ -278,12 +316,31 @@ export default function App() {
           </div>
         </section>
 
-        <aside className="w-full md:w-[380px] lg:w-[420px] shrink-0 bg-[#2A1610] rounded-[32px] shadow-2xl p-6 md:p-8 flex flex-col relative overflow-hidden">
+        {/* SACOLA (CARRINHO) LATERAL/MODAL */}
+        <aside
+          className={`
+          fixed inset-x-0 bottom-0 z-50 h-[85vh] transform transition-transform duration-300 ease-in-out
+          md:relative md:inset-auto md:h-auto md:w-[380px] lg:w-[420px] md:transform-none md:z-10
+          ${isCartMobileOpen ? "translate-y-0" : "translate-y-full"}
+          bg-[#2A1610] rounded-t-[32px] md:rounded-[32px] shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.5)] md:shadow-2xl p-6 md:p-8 flex flex-col overflow-hidden
+        `}
+        >
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#B58E38] opacity-10 rounded-bl-full pointer-events-none" />
-          <div className="flex items-center gap-3 mb-8 shrink-0 relative z-10 border-b border-white/10 pb-6">
-            <ShoppingBag className="w-6 h-6 text-[#B58E38]" />
-            <h2 className="text-2xl font-serif text-white">Sua Seleção</h2>
+
+          <div className="flex justify-between items-center mb-8 shrink-0 relative z-10 border-b border-white/10 pb-6">
+            <div className="flex items-center gap-3">
+              <ShoppingBag className="w-6 h-6 text-[#B58E38]" />
+              <h2 className="text-2xl font-serif text-white">Sua Seleção</h2>
+            </div>
+            {/* Botão de Fechar Apenas no Mobile */}
+            <button
+              onClick={() => setIsCartMobileOpen(false)}
+              className="md:hidden text-white/50 hover:text-white p-2"
+            >
+              <X size={24} />
+            </button>
           </div>
+
           <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-2 mb-6 scrollbar-hide min-h-[200px] relative z-10">
             {orderSuccess ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center gap-4 text-white animate-in fade-in duration-500">
@@ -302,7 +359,10 @@ export default function App() {
                   </p>
                 </div>
                 <button
-                  onClick={() => setOrderSuccess(false)}
+                  onClick={() => {
+                    setOrderSuccess(false);
+                    setIsCartMobileOpen(false);
+                  }}
                   className="mt-6 px-8 py-3 bg-[#B58E38] rounded-full text-sm font-bold text-white shadow-sm hover:bg-[#9E7A2E] transition-all"
                 >
                   Nova Encomenda
@@ -362,7 +422,7 @@ export default function App() {
                 </div>
                 {deliveryType === "entrega" ? (
                   <textarea
-                    placeholder="Endereço de Entrega (Rua, Número, Bairro, Complemento)"
+                    placeholder="Endereço (Rua, Número, Bairro...)"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-sm h-24 resize-none focus:border-[#B58E38] outline-none text-white placeholder:text-white/30 transition-all"
@@ -400,13 +460,36 @@ export default function App() {
                 <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                   <path d="M12.012 2c-5.508 0-9.987 4.479-9.987 9.988 0 1.757.459 3.41 1.259 4.85l-1.336 4.88 4.996-1.313c1.408.767 3.013 1.206 4.719 1.206 5.507 0 10.02-4.479 10.02-9.988S17.519 2 12.012 2z" />
                 </svg>{" "}
-                Finalizar no WhatsApp
+                Finalizar Pedido
               </button>
             </div>
           )}
         </aside>
+
+        {/* BOTÃO FLUTUANTE DO CARRINHO (APENAS MOBILE) */}
+        {!isCartMobileOpen && (
+          <div className="fixed bottom-0 left-0 w-full p-4 bg-gradient-to-t from-[#F5F2EB] via-[#F5F2EB] to-transparent z-30 md:hidden pointer-events-none">
+            <button
+              onClick={() => setIsCartMobileOpen(true)}
+              className="w-full bg-[#B58E38] text-white p-4 rounded-2xl shadow-[0_8px_30px_-4px_rgba(181,142,56,0.4)] flex justify-between items-center font-bold active:scale-[0.98] transition-all pointer-events-auto"
+            >
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <ShoppingBag size={22} />
+                  {cartItemsCount > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-white text-[#B58E38] text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold shadow-sm">
+                      {cartItemsCount}
+                    </span>
+                  )}
+                </div>
+                <span>Ver Sacola</span>
+              </div>
+              <span className="text-lg">{formatPrice(cartTotal)}</span>
+            </button>
+          </div>
+        )}
       </main>
-      <footer className="py-6 flex items-center justify-center shrink-0">
+      <footer className="py-6 flex items-center justify-center shrink-0 hidden md:flex">
         <p className="text-[10px] text-[#2A1610]/40 font-semibold tracking-[0.2em] uppercase">
           Santo Cacau &bull; O Sabor da Intensidade &bull; (17) 99754-1174
         </p>
