@@ -1,5 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
-import { MapPin, Store, ShoppingBag, X, ChevronDown } from "lucide-react";
+import {
+  MapPin,
+  Store,
+  ShoppingBag,
+  X,
+  ChevronDown,
+  CalendarDays,
+} from "lucide-react";
 import { initializeApp } from "firebase/app";
 import {
   getFirestore,
@@ -62,10 +69,11 @@ export default function App() {
     return {};
   });
 
-  const [activeCategory, setActiveCategory] = useState("Brigadeiros");
+  const [activeCategory, setActiveCategory] = useState("Brigadeiros"); // Categoria Padrão
   const [customerName, setCustomerName] = useState("");
   const [deliveryType, setDeliveryType] = useState<DeliveryType>("entrega");
   const [address, setAddress] = useState("");
+  const [deliveryDate, setDeliveryDate] = useState(""); // Novo estado: Data de Entrega
   const [orderSuccess, setOrderSuccess] = useState(false);
 
   useEffect(() => {
@@ -105,6 +113,31 @@ export default function App() {
     });
   };
 
+  // ==================================================
+  // LÓGICA DE DATAS (CONDIÇÃO PARA MAIS DE 50 BRIGADEIROS)
+  // ==================================================
+  const totalBrigadeiros = useMemo(() => {
+    let count = 0;
+    Object.entries(cart).forEach(([id, quantity]) => {
+      const p = products.find((prod) => prod.id === id);
+      // Conta apenas itens da categoria "Brigadeiros"
+      if (p && p.category.toLowerCase().includes("brigadeiro")) {
+        count += quantity;
+      }
+    });
+    return count;
+  }, [cart, products]);
+
+  const minDeliveryDate = useMemo(() => {
+    const d = new Date();
+    if (totalBrigadeiros > 50) {
+      d.setDate(d.getDate() + 7); // Mínimo de 1 semana
+    } else {
+      d.setDate(d.getDate() + 1); // Mínimo de 1 dia (amanhã) para encomendas normais
+    }
+    return d.toISOString().split("T")[0];
+  }, [totalBrigadeiros]);
+
   const handleSendWhatsApp = async () => {
     if (!customerName) {
       alert("Por favor, informe seu nome antes de finalizar o pedido!");
@@ -114,10 +147,30 @@ export default function App() {
       alert("Por favor, informe o endereço de entrega completo!");
       return;
     }
-    if (Object.keys(cart).length === 0) {
-      alert("Seu carrinho está vazio!");
+    if (!deliveryDate) {
+      alert("Por favor, selecione a data desejada para a encomenda!");
       return;
     }
+    if (Object.keys(cart).length === 0) {
+      alert("A sua sacola está vazia!");
+      return;
+    }
+
+    // Validação de segurança extra para a data
+    const selectedDateObj = new Date(deliveryDate + "T00:00:00");
+    const minDateObj = new Date(minDeliveryDate + "T00:00:00");
+    if (selectedDateObj < minDateObj) {
+      alert(
+        totalBrigadeiros > 50
+          ? "Para encomendas acima de 50 brigadeiros, o prazo mínimo é de 1 semana."
+          : "Data selecionada é inválida.",
+      );
+      return;
+    }
+
+    // Formata a data para (DD/MM/AAAA)
+    const [year, month, day] = deliveryDate.split("-");
+    const formattedDate = `${day}/${month}/${year}`;
 
     // 1. Prepara os dados para o Banco de Dados
     const orderItems = Object.entries(cart).map(([id, quantity]) => {
@@ -134,6 +187,7 @@ export default function App() {
       customerName,
       deliveryType,
       address: deliveryType === "entrega" ? address : "Retirada na loja",
+      deliveryDate: formattedDate, // Nova data vai para a Dashboard
       total: total,
       status: "Pendente",
       createdAt: Date.now(),
@@ -141,7 +195,7 @@ export default function App() {
     };
 
     try {
-      // 2. Salva no Firebase (Isso faz aparecer na Dashboard!)
+      // 2. Salva no Firebase
       await addDoc(collection(db, "orders"), orderData);
 
       // 3. Monta e envia a mensagem do WhatsApp (Limpa e sem emojis)
@@ -154,7 +208,8 @@ export default function App() {
       });
 
       text += `\n*Total:* ${formatPrice(total)}\n`;
-      text += `\n*Modalidade:* ${deliveryType === "entrega" ? "Entrega" : "Retirada na Loja"}\n`;
+      text += `\n*Data Solicitada:* ${formattedDate}\n`;
+      text += `*Modalidade:* ${deliveryType === "entrega" ? "Entrega" : "Retirada na Loja"}\n`;
 
       if (deliveryType === "entrega") {
         text += `*Endereço:* ${address}\n`;
@@ -164,14 +219,15 @@ export default function App() {
       const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
       window.open(whatsappUrl, "_blank");
 
-      // 4. Limpa o carrinho e mostra sucesso
+      // 4. Limpa tudo e mostra sucesso
       setCart({});
       setCustomerName("");
       setAddress("");
+      setDeliveryDate("");
       setOrderSuccess(true);
     } catch (error) {
       console.error(error);
-      alert("Houve um erro ao registrar seu pedido. Tente novamente.");
+      alert("Houve um erro ao registar a sua encomenda. Tente novamente.");
     }
   };
 
@@ -195,7 +251,6 @@ export default function App() {
 
   return (
     <div className="w-full min-h-screen md:h-screen bg-[#F5F2EB] flex flex-col md:overflow-hidden font-sans text-[#2A1610] relative">
-      {/* Overlay Escuro para fechar o carrinho no mobile */}
       {isCartMobileOpen && (
         <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden transition-opacity"
@@ -203,7 +258,6 @@ export default function App() {
         />
       )}
 
-      {/* HEADER */}
       <header className="h-24 bg-transparent flex items-center px-4 md:px-8 shrink-0 pt-4 max-w-[1400px] mx-auto w-full">
         <div className="flex items-center gap-4">
           <div className="bg-white p-1 rounded-full shadow-sm">
@@ -225,7 +279,6 @@ export default function App() {
       </header>
 
       <main className="flex-1 flex flex-col md:flex-row md:overflow-hidden p-4 md:p-8 md:pt-4 gap-8 max-w-[1400px] mx-auto w-full">
-        {/* SEÇÃO PRODUTOS */}
         <section className="flex-[2] flex flex-col gap-6 md:gap-8 md:overflow-hidden">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0">
             <div>
@@ -237,7 +290,6 @@ export default function App() {
               </p>
             </div>
 
-            {/* Menu Suspenso (Dropdown) - APENAS MOBILE */}
             <div className="w-full md:hidden relative mt-2">
               <select
                 value={activeCategory}
@@ -256,7 +308,6 @@ export default function App() {
               />
             </div>
 
-            {/* Menu Horizontal - APENAS DESKTOP */}
             <div className="hidden md:flex overflow-x-auto gap-6 pb-2 md:pb-0 scrollbar-hide border-b border-[#B58E38]/20">
               {CATEGORIES.map((cat) => (
                 <button
@@ -346,7 +397,6 @@ export default function App() {
           </div>
         </section>
 
-        {/* SACOLA (CARRINHO) LATERAL/MODAL */}
         <aside
           className={`
           fixed inset-x-0 bottom-0 z-50 h-[85vh] transition-transform duration-300 ease-in-out
@@ -357,12 +407,11 @@ export default function App() {
         >
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#B58E38] opacity-10 rounded-bl-full pointer-events-none" />
 
-          <div className="flex justify-between items-center mb-8 shrink-0 relative z-10 border-b border-white/10 pb-6">
+          <div className="flex justify-between items-center mb-6 shrink-0 relative z-10 border-b border-white/10 pb-6">
             <div className="flex items-center gap-3">
               <ShoppingBag className="w-6 h-6 text-[#B58E38]" />
               <h2 className="text-2xl font-serif text-white">Sua Seleção</h2>
             </div>
-            {/* Botão de Fechar Apenas no Mobile */}
             <button
               onClick={() => setIsCartMobileOpen(false)}
               className="md:hidden text-white/50 hover:text-white p-2"
@@ -371,7 +420,7 @@ export default function App() {
             </button>
           </div>
 
-          <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-2 mb-6 scrollbar-hide min-h-[200px] relative z-10">
+          <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-2 mb-4 scrollbar-hide min-h-[200px] relative z-10">
             {orderSuccess ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center gap-4 text-white animate-in fade-in duration-500">
                 <div className="w-16 h-16 bg-[#B58E38]/20 text-[#B58E38] rounded-full flex items-center justify-center mb-2">
@@ -400,7 +449,7 @@ export default function App() {
               </div>
             ) : Object.entries(cart).length === 0 ? (
               <div className="flex-1 flex items-center justify-center text-center text-white/30 text-sm font-serif italic">
-                Sua sacola está vazia.
+                A sua sacola está vazia.
                 <br />
                 Adicione as nossas delícias!
               </div>
@@ -428,24 +477,45 @@ export default function App() {
             )}
 
             {!orderSuccess && (
-              <div className="mt-auto pt-6 flex flex-col gap-4 shrink-0">
+              <div className="mt-auto pt-4 flex flex-col gap-3 shrink-0">
                 <input
                   type="text"
                   placeholder="Nome do Cliente"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-sm focus:border-[#B58E38] outline-none text-white placeholder:text-white/30 transition-all"
+                  className="bg-white/5 border border-white/10 rounded-xl p-3 text-sm focus:border-[#B58E38] outline-none text-white placeholder:text-white/30 transition-all"
                 />
-                <div className="flex gap-2 bg-white/5 p-1.5 rounded-xl border border-white/5">
+
+                {/* CALENDÁRIO COM LÓGICA CONDICIONAL */}
+                <div className="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col gap-1">
+                  <label className="text-[10px] uppercase font-bold text-[#B58E38] tracking-widest flex items-center gap-1.5">
+                    <CalendarDays size={12} /> Data Desejada
+                  </label>
+                  <input
+                    type="date"
+                    min={minDeliveryDate}
+                    value={deliveryDate}
+                    onChange={(e) => setDeliveryDate(e.target.value)}
+                    className="w-full bg-transparent text-sm focus:outline-none text-white transition-all [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
+                  />
+                  {totalBrigadeiros > 50 && (
+                    <span className="text-[10px] text-yellow-500/90 leading-tight mt-1 border-t border-white/10 pt-1.5">
+                      ⚠️ Acima de 50 brigadeiros, o prazo mínimo de entrega é de
+                      1 semana.
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex gap-2 bg-white/5 p-1 rounded-xl border border-white/5">
                   <button
                     onClick={() => setDeliveryType("entrega")}
-                    className={`flex-1 py-2.5 text-[10px] md:text-xs uppercase font-bold rounded-lg transition-all flex items-center justify-center gap-2 shrink-0 ${deliveryType === "entrega" ? "bg-[#B58E38] text-white shadow-md" : "text-white/50 hover:text-white"}`}
+                    className={`flex-1 py-2 text-[10px] md:text-xs uppercase font-bold rounded-lg transition-all flex items-center justify-center gap-2 shrink-0 ${deliveryType === "entrega" ? "bg-[#B58E38] text-white shadow-md" : "text-white/50 hover:text-white"}`}
                   >
                     <MapPin className="w-3 h-3 md:w-4 md:h-4" /> Entrega
                   </button>
                   <button
                     onClick={() => setDeliveryType("retirada")}
-                    className={`flex-1 py-2.5 text-[10px] md:text-xs uppercase font-bold rounded-lg transition-all flex items-center justify-center gap-2 shrink-0 ${deliveryType === "retirada" ? "bg-[#B58E38] text-white shadow-md" : "text-white/50 hover:text-white"}`}
+                    className={`flex-1 py-2 text-[10px] md:text-xs uppercase font-bold rounded-lg transition-all flex items-center justify-center gap-2 shrink-0 ${deliveryType === "retirada" ? "bg-[#B58E38] text-white shadow-md" : "text-white/50 hover:text-white"}`}
                   >
                     <Store className="w-3 h-3 md:w-4 md:h-4" /> Retirada
                   </button>
@@ -455,13 +525,13 @@ export default function App() {
                     placeholder="Endereço (Rua, Número, Bairro...)"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-sm h-24 resize-none focus:border-[#B58E38] outline-none text-white placeholder:text-white/30 transition-all"
+                    className="bg-white/5 border border-white/10 rounded-xl p-3 text-sm h-16 resize-none focus:border-[#B58E38] outline-none text-white placeholder:text-white/30 transition-all"
                   />
                 ) : (
-                  <div className="bg-[#B58E38]/10 rounded-xl p-5 text-xs text-white/80 text-center border border-[#B58E38]/20">
-                    Retirada na nossa loja:
+                  <div className="bg-[#B58E38]/10 rounded-xl p-3 text-xs text-white/80 text-center border border-[#B58E38]/20">
+                    Retirada na loja:
                     <br />
-                    <strong className="font-semibold block mt-2 text-[#B58E38] text-sm leading-relaxed">
+                    <strong className="font-semibold block mt-1 text-[#B58E38] text-sm leading-relaxed">
                       Rua Rosa Rita dos Santos Sabadotto, 3828
                       <br />
                       Monte Verde - Votuporanga SP
@@ -473,9 +543,9 @@ export default function App() {
           </div>
 
           {!orderSuccess && (
-            <div className="pt-4 shrink-0 relative z-10">
-              <div className="flex justify-between items-end mb-6 bg-white/5 p-5 rounded-xl border border-white/5">
-                <span className="text-white/60 uppercase text-xs font-bold tracking-widest mb-1">
+            <div className="pt-4 shrink-0 relative z-10 border-t border-white/10">
+              <div className="flex justify-between items-end mb-4">
+                <span className="text-white/60 uppercase text-xs font-bold tracking-widest">
                   Total
                 </span>
                 <span className="text-3xl font-serif font-bold text-[#B58E38] tracking-tight">
@@ -485,7 +555,7 @@ export default function App() {
               <button
                 onClick={handleSendWhatsApp}
                 disabled={Object.keys(cart).length === 0}
-                className="w-full bg-[#B58E38] text-white py-4.5 rounded-xl font-bold text-sm shadow-lg hover:bg-[#9E7A2E] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:pointer-events-none"
+                className="w-full bg-[#B58E38] text-white py-4 rounded-xl font-bold text-sm shadow-lg hover:bg-[#9E7A2E] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:pointer-events-none"
               >
                 <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                   <path d="M12.012 2c-5.508 0-9.987 4.479-9.987 9.988 0 1.757.459 3.41 1.259 4.85l-1.336 4.88 4.996-1.313c1.408.767 3.013 1.206 4.719 1.206 5.507 0 10.02-4.479 10.02-9.988S17.519 2 12.012 2z" />
@@ -496,7 +566,6 @@ export default function App() {
           )}
         </aside>
 
-        {/* BOTÃO FLUTUANTE DO CARRINHO (APENAS MOBILE) */}
         {!isCartMobileOpen && (
           <div className="fixed bottom-0 left-0 w-full p-4 bg-gradient-to-t from-[#F5F2EB] via-[#F5F2EB] to-transparent z-30 md:hidden pointer-events-none">
             <button
