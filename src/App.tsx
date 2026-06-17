@@ -319,9 +319,9 @@ export default function App() {
         {/* SACOLA (CARRINHO) LATERAL/MODAL */}
         <aside
           className={`
-          fixed inset-x-0 bottom-0 z-50 h-[85vh] transform transition-transform duration-300 ease-in-out
-          md:relative md:inset-auto md:h-auto md:w-[380px] lg:w-[420px] md:transform-none md:z-10
-          ${isCartMobileOpen ? "translate-y-0" : "translate-y-full"}
+          fixed inset-x-0 bottom-0 z-50 h-[85vh] transition-transform duration-300 ease-in-out
+          md:relative md:inset-auto md:h-auto md:w-[380px] lg:w-[420px] shrink-0 md:z-10
+          ${isCartMobileOpen ? "translate-y-0" : "translate-y-full"} md:translate-y-0
           bg-[#2A1610] rounded-t-[32px] md:rounded-[32px] shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.5)] md:shadow-2xl p-6 md:p-8 flex flex-col overflow-hidden
         `}
         >
