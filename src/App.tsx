@@ -126,14 +126,18 @@ export default function App() {
     Object.entries(cart).forEach(([id, quantity]) => {
       const product = products.find((p) => p.id === id);
       if (product) {
-        text += `• ${quantity}x ${product.name} (${formatPrice(product.price)})\n`;
+        // Trocado o bullet por um hífen padrão para evitar qualquer erro de codificação
+        text += `- ${quantity}x ${product.name} (${formatPrice(product.price)})\n`;
         total += product.price * quantity;
       }
     });
 
     text += `\n*Total:* ${formatPrice(total)}\n`;
-    text += `\n*Modalidade:* ${deliveryType === "entrega" ? "Entrega 🛵" : "Retirada 🏪"}\n`;
-    if (deliveryType === "entrega") text += `*Endereço:* ${address}\n`;
+    text += `\n*Modalidade:* ${deliveryType === "entrega" ? "Entrega" : "Retirada na Loja"}\n`;
+
+    if (deliveryType === "entrega") {
+      text += `*Endereço:* ${address}\n`;
+    }
 
     const phone = "5517997541174";
     const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
