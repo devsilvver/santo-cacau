@@ -61,7 +61,7 @@ export default function App() {
     return {};
   });
 
-  const [activeCategory, setActiveCategory] = useState("Todos");
+  const [activeCategory, setActiveCategory] = useState("Brigadeiros");
   const [customerName, setCustomerName] = useState("");
   const [deliveryType, setDeliveryType] = useState<DeliveryType>("entrega");
   const [address, setAddress] = useState("");
