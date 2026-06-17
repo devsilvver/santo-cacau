@@ -1,12 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
-import { MapPin, Store, ShoppingBag, Loader2 } from "lucide-react";
+import { MapPin, Store, ShoppingBag } from "lucide-react";
 import { initializeApp } from "firebase/app";
 import {
   getFirestore,
   collection,
   onSnapshot,
   query,
-  addDoc,
 } from "firebase/firestore";
 
 // ==========================================
@@ -32,8 +31,8 @@ interface Product {
   description: string;
   price: number;
   category: string;
-  emoji: string;
-  stock_quantity: number;
+  imageUrl?: string;
+  emoji?: string; // Para compatibilidade com produtos antigos
 }
 
 const CATEGORIES = [
@@ -48,7 +47,6 @@ const CATEGORIES = [
 export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [cart, setCart] = useState<Record<string, number>>(() => {
     const savedCart = localStorage.getItem("@santo-cacau:cart");
@@ -91,17 +89,9 @@ export default function App() {
   };
 
   const updateCart = (productId: string, delta: number) => {
-    const product = products.find((p) => p.id === productId);
-    if (!product) return;
     setCart((prev) => {
       const current = prev[productId] || 0;
       const next = Math.max(0, current + delta);
-      if (next > product.stock_quantity) {
-        alert(
-          `Desculpe, temos apenas ${product.stock_quantity} unidades de ${product.name} no momento.`,
-        );
-        return prev;
-      }
       if (next === 0) {
         const nextCart = { ...prev };
         delete nextCart[productId];
@@ -111,16 +101,7 @@ export default function App() {
     });
   };
 
-  const cartTotal = useMemo(() => {
-    let total = 0;
-    Object.entries(cart).forEach(([id, qty]) => {
-      const p = products.find((prod) => prod.id === id);
-      if (p) total += p.price * qty;
-    });
-    return total;
-  }, [cart, products]);
-
-  const handleSendWhatsApp = async () => {
+  const handleSendWhatsApp = () => {
     if (!customerName) {
       alert("Por favor, informe seu nome antes de finalizar o pedido!");
       return;
@@ -134,61 +115,46 @@ export default function App() {
       return;
     }
 
-    setIsSubmitting(true);
+    let text = `Olá, Santo Cacau! Gostaria de fazer uma encomenda.\n\n`;
+    text += `*Cliente:* ${customerName}\n\n`;
+    text += `*Pedido:*\n`;
 
-    // 1. Prepara os dados para o Banco de Dados
-    const orderItems = Object.entries(cart).map(([id, quantity]) => {
-      const p = products.find((prod) => prod.id === id);
-      return { id, name: p?.name || "Produto", price: p?.price || 0, quantity };
+    let total = 0;
+    Object.entries(cart).forEach(([id, quantity]) => {
+      const product = products.find((p) => p.id === id);
+      if (product) {
+        text += `• ${quantity}x ${product.name} (${formatPrice(product.price)})\n`;
+        total += product.price * quantity;
+      }
     });
 
-    const orderData = {
-      customerName,
-      deliveryType,
-      address: deliveryType === "entrega" ? address : "Retirada na loja",
-      total: cartTotal,
-      status: "Pendente",
-      createdAt: Date.now(),
-      items: orderItems,
-    };
+    text += `\n*Total:* ${formatPrice(total)}\n`;
+    text += `\n*Modalidade:* ${deliveryType === "entrega" ? "Entrega 🛵" : "Retirada 🏪"}\n`;
+    if (deliveryType === "entrega") text += `*Endereço:* ${address}\n`;
 
-    try {
-      // 2. Salva no Firebase
-      await addDoc(collection(db, "orders"), orderData);
+    const phone = "5517997541174";
+    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+    window.open(whatsappUrl, "_blank");
 
-      // 3. Monta e envia a mensagem do WhatsApp
-      let text = `Olá, Santo Cacau! Gostaria de fazer um pedido.\n\n`;
-      text += `*Cliente:* ${customerName}\n\n`;
-      text += `*Pedido:*\n`;
-      orderItems.forEach((item) => {
-        text += `• ${item.quantity}x ${item.name} (${formatPrice(item.price)})\n`;
-      });
-      text += `\n*Total:* ${formatPrice(cartTotal)}\n`;
-      text += `\n*Modalidade:* ${deliveryType === "entrega" ? "Entrega" : "Retirada na loja"}\n`;
-      if (deliveryType === "entrega") {
-        text += `*Endereço:* ${address}\n`;
-      }
-
-      const phone = "5517997541174";
-      const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
-      window.open(whatsappUrl, "_blank");
-
-      // 4. Limpa tudo e mostra sucesso
-      setCart({});
-      setCustomerName("");
-      setAddress("");
-      setOrderSuccess(true);
-    } catch (error) {
-      alert("Houve um erro ao registrar seu pedido. Tente novamente.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    setCart({});
+    setCustomerName("");
+    setAddress("");
+    setOrderSuccess(true);
   };
 
   const filteredProducts =
     activeCategory === "Todos"
       ? products
       : products.filter((p) => p.category === activeCategory);
+
+  const cartTotal = useMemo(() => {
+    let total = 0;
+    Object.entries(cart).forEach(([id, qty]) => {
+      const p = products.find((prod) => prod.id === id);
+      if (p) total += p.price * qty;
+    });
+    return total;
+  }, [cart, products]);
 
   return (
     <div className="w-full min-h-screen md:h-screen bg-[#F5F2EB] flex flex-col md:overflow-hidden font-sans text-[#2A1610]">
@@ -246,62 +212,62 @@ export default function App() {
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 pb-6 md:pb-20">
-                {filteredProducts.map((product) => {
-                  const isOutOfStock = product.stock_quantity <= 0;
-                  return (
-                    <div
-                      key={product.id}
-                      className={`bg-white rounded-[20px] p-5 flex gap-5 border border-transparent shadow-[0_4px_20px_-4px_rgba(42,22,16,0.04)] transition-all group ${isOutOfStock ? "opacity-60 grayscale" : "hover:shadow-[0_8px_30px_-4px_rgba(42,22,16,0.08)] hover:border-[#B58E38]/20"}`}
-                    >
-                      <div className="w-20 h-20 md:w-24 md:h-24 shrink-0 bg-[#F5F2EB] rounded-full flex items-center justify-center text-3xl shadow-inner relative">
-                        {product.emoji}
+                {filteredProducts.map((product) => (
+                  <div
+                    key={product.id}
+                    className="bg-white rounded-[20px] p-5 flex gap-5 border border-transparent shadow-[0_4px_20px_-4px_rgba(42,22,16,0.04)] transition-all group hover:shadow-[0_8px_30px_-4px_rgba(42,22,16,0.08)] hover:border-[#B58E38]/20"
+                  >
+                    <div className="w-20 h-20 md:w-24 md:h-24 shrink-0 bg-[#F5F2EB] rounded-full flex items-center justify-center shadow-inner relative overflow-hidden">
+                      {product.imageUrl ? (
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-3xl">
+                          {product.emoji || "🍫"}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 flex flex-col justify-between py-1">
+                      <div>
+                        <h3 className="font-serif font-bold text-lg text-[#2A1610] group-hover:text-[#B58E38] transition-colors">
+                          {product.name}
+                        </h3>
+                        <p className="text-xs text-[#2A1610]/60 leading-relaxed mt-1">
+                          {product.description}
+                        </p>
                       </div>
-                      <div className="flex-1 flex flex-col justify-between py-1">
-                        <div>
-                          <h3 className="font-serif font-bold text-lg text-[#2A1610] group-hover:text-[#B58E38] transition-colors">
-                            {product.name}
-                          </h3>
-                          <p className="text-xs text-[#2A1610]/60 leading-relaxed mt-1">
-                            {product.description}
-                          </p>
-                        </div>
-                        <div className="flex justify-between items-center mt-4">
-                          <span className="text-[#B58E38] font-bold text-lg">
-                            {formatPrice(product.price)}
+                      <div className="flex justify-between items-center mt-4">
+                        <span className="text-[#B58E38] font-bold text-lg">
+                          {formatPrice(product.price)}
+                        </span>
+                        <div className="flex items-center bg-[#F5F2EB] rounded-full p-1 border border-[#B58E38]/10">
+                          <button
+                            onClick={() => updateCart(product.id, -1)}
+                            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white text-[#2A1610] transition-colors disabled:opacity-30"
+                            disabled={!cart[product.id]}
+                          >
+                            -
+                          </button>
+                          <span
+                            className={`w-6 text-center font-mono text-sm ${cart[product.id] ? "text-[#2A1610] font-bold" : "text-[#2A1610]/40"}`}
+                          >
+                            {cart[product.id]?.toString().padStart(2, "0") ||
+                              "00"}
                           </span>
-                          {isOutOfStock ? (
-                            <span className="text-[10px] font-bold bg-red-100 text-red-600 px-3 py-1 rounded-full uppercase tracking-wider">
-                              Esgotado
-                            </span>
-                          ) : (
-                            <div className="flex items-center bg-[#F5F2EB] rounded-full p-1 border border-[#B58E38]/10">
-                              <button
-                                onClick={() => updateCart(product.id, -1)}
-                                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white text-[#2A1610] transition-colors disabled:opacity-30"
-                                disabled={!cart[product.id]}
-                              >
-                                -
-                              </button>
-                              <span
-                                className={`w-6 text-center font-mono text-sm ${cart[product.id] ? "text-[#2A1610] font-bold" : "text-[#2A1610]/40"}`}
-                              >
-                                {cart[product.id]
-                                  ?.toString()
-                                  .padStart(2, "0") || "00"}
-                              </span>
-                              <button
-                                onClick={() => updateCart(product.id, 1)}
-                                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white text-[#2A1610] transition-colors"
-                              >
-                                +
-                              </button>
-                            </div>
-                          )}
+                          <button
+                            onClick={() => updateCart(product.id, 1)}
+                            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white text-[#2A1610] transition-colors"
+                          >
+                            +
+                          </button>
                         </div>
                       </div>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
                 {filteredProducts.length === 0 && (
                   <div className="col-span-full h-32 flex items-center justify-center text-[#2A1610]/40 font-serif italic text-lg">
                     Nenhum doce encontrado nesta categoria.
@@ -318,7 +284,6 @@ export default function App() {
             <ShoppingBag className="w-6 h-6 text-[#B58E38]" />
             <h2 className="text-2xl font-serif text-white">Sua Seleção</h2>
           </div>
-
           <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-2 mb-6 scrollbar-hide min-h-[200px] relative z-10">
             {orderSuccess ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center gap-4 text-white animate-in fade-in duration-500">
@@ -329,18 +294,18 @@ export default function App() {
                 </div>
                 <div>
                   <h3 className="font-serif text-2xl font-bold mb-2 text-[#B58E38]">
-                    Pedido Gerado!
+                    Encomenda Gerada!
                   </h3>
                   <p className="text-sm text-white/70 leading-relaxed max-w-[250px] mx-auto">
-                    Seu pedido foi registrado. Finalize os detalhes diretamente
-                    no WhatsApp.
+                    Sua sacola foi salva. Finalize os detalhes diretamente no
+                    WhatsApp.
                   </p>
                 </div>
                 <button
                   onClick={() => setOrderSuccess(false)}
                   className="mt-6 px-8 py-3 bg-[#B58E38] rounded-full text-sm font-bold text-white shadow-sm hover:bg-[#9E7A2E] transition-all"
                 >
-                  Fazer Novo Pedido
+                  Nova Encomenda
                 </button>
               </div>
             ) : Object.entries(cart).length === 0 ? (
@@ -379,20 +344,17 @@ export default function App() {
                   placeholder="Nome do Cliente"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  disabled={isSubmitting}
-                  className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-sm focus:border-[#B58E38] outline-none text-white placeholder:text-white/30 transition-all disabled:opacity-50"
+                  className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-sm focus:border-[#B58E38] outline-none text-white placeholder:text-white/30 transition-all"
                 />
                 <div className="flex gap-2 bg-white/5 p-1.5 rounded-xl border border-white/5">
                   <button
                     onClick={() => setDeliveryType("entrega")}
-                    disabled={isSubmitting}
                     className={`flex-1 py-2.5 text-[10px] md:text-xs uppercase font-bold rounded-lg transition-all flex items-center justify-center gap-2 shrink-0 ${deliveryType === "entrega" ? "bg-[#B58E38] text-white shadow-md" : "text-white/50 hover:text-white"}`}
                   >
                     <MapPin className="w-3 h-3 md:w-4 md:h-4" /> Entrega
                   </button>
                   <button
                     onClick={() => setDeliveryType("retirada")}
-                    disabled={isSubmitting}
                     className={`flex-1 py-2.5 text-[10px] md:text-xs uppercase font-bold rounded-lg transition-all flex items-center justify-center gap-2 shrink-0 ${deliveryType === "retirada" ? "bg-[#B58E38] text-white shadow-md" : "text-white/50 hover:text-white"}`}
                   >
                     <Store className="w-3 h-3 md:w-4 md:h-4" /> Retirada
@@ -403,8 +365,7 @@ export default function App() {
                     placeholder="Endereço de Entrega (Rua, Número, Bairro, Complemento)"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    disabled={isSubmitting}
-                    className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-sm h-24 resize-none focus:border-[#B58E38] outline-none text-white placeholder:text-white/30 transition-all disabled:opacity-50"
+                    className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-sm h-24 resize-none focus:border-[#B58E38] outline-none text-white placeholder:text-white/30 transition-all"
                   />
                 ) : (
                   <div className="bg-[#B58E38]/10 rounded-xl p-5 text-xs text-white/80 text-center border border-[#B58E38]/20">
@@ -433,27 +394,18 @@ export default function App() {
               </div>
               <button
                 onClick={handleSendWhatsApp}
-                disabled={Object.keys(cart).length === 0 || isSubmitting}
+                disabled={Object.keys(cart).length === 0}
                 className="w-full bg-[#B58E38] text-white py-4.5 rounded-xl font-bold text-sm shadow-lg hover:bg-[#9E7A2E] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:pointer-events-none"
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" /> Registrando...
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                      <path d="M12.012 2c-5.508 0-9.987 4.479-9.987 9.988 0 1.757.459 3.41 1.259 4.85l-1.336 4.88 4.996-1.313c1.408.767 3.013 1.206 4.719 1.206 5.507 0 10.02-4.479 10.02-9.988S17.519 2 12.012 2z" />
-                    </svg>{" "}
-                    Finalizar no WhatsApp
-                  </>
-                )}
+                <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                  <path d="M12.012 2c-5.508 0-9.987 4.479-9.987 9.988 0 1.757.459 3.41 1.259 4.85l-1.336 4.88 4.996-1.313c1.408.767 3.013 1.206 4.719 1.206 5.507 0 10.02-4.479 10.02-9.988S17.519 2 12.012 2z" />
+                </svg>{" "}
+                Finalizar no WhatsApp
               </button>
             </div>
           )}
         </aside>
       </main>
-
       <footer className="py-6 flex items-center justify-center shrink-0">
         <p className="text-[10px] text-[#2A1610]/40 font-semibold tracking-[0.2em] uppercase">
           Santo Cacau &bull; O Sabor da Intensidade &bull; (17) 99754-1174
