@@ -6,6 +6,7 @@ import {
   collection,
   onSnapshot,
   query,
+  addDoc,
 } from "firebase/firestore";
 
 // ==========================================
@@ -104,7 +105,7 @@ export default function App() {
     });
   };
 
-  const handleSendWhatsApp = () => {
+  const handleSendWhatsApp = async () => {
     if (!customerName) {
       alert("Por favor, informe seu nome antes de finalizar o pedido!");
       return;
@@ -118,35 +119,60 @@ export default function App() {
       return;
     }
 
-    let text = `Olá, Santo Cacau! Gostaria de fazer uma encomenda.\n\n`;
-    text += `*Cliente:* ${customerName}\n\n`;
-    text += `*Pedido:*\n`;
-
-    let total = 0;
-    Object.entries(cart).forEach(([id, quantity]) => {
-      const product = products.find((p) => p.id === id);
-      if (product) {
-        // Trocado o bullet por um hífen padrão para evitar qualquer erro de codificação
-        text += `- ${quantity}x ${product.name} (${formatPrice(product.price)})\n`;
-        total += product.price * quantity;
-      }
+    // 1. Prepara os dados para o Banco de Dados
+    const orderItems = Object.entries(cart).map(([id, quantity]) => {
+      const p = products.find((prod) => prod.id === id);
+      return { id, name: p?.name || "Produto", price: p?.price || 0, quantity };
     });
 
-    text += `\n*Total:* ${formatPrice(total)}\n`;
-    text += `\n*Modalidade:* ${deliveryType === "entrega" ? "Entrega" : "Retirada na Loja"}\n`;
+    let total = 0;
+    orderItems.forEach((item) => {
+      total += item.price * item.quantity;
+    });
 
-    if (deliveryType === "entrega") {
-      text += `*Endereço:* ${address}\n`;
+    const orderData = {
+      customerName,
+      deliveryType,
+      address: deliveryType === "entrega" ? address : "Retirada na loja",
+      total: total,
+      status: "Pendente",
+      createdAt: Date.now(),
+      items: orderItems,
+    };
+
+    try {
+      // 2. Salva no Firebase (Isso faz aparecer na Dashboard!)
+      await addDoc(collection(db, "orders"), orderData);
+
+      // 3. Monta e envia a mensagem do WhatsApp (Limpa e sem emojis)
+      let text = `Olá, Santo Cacau! Gostaria de fazer uma encomenda.\n\n`;
+      text += `*Cliente:* ${customerName}\n\n`;
+      text += `*Pedido:*\n`;
+
+      orderItems.forEach((item) => {
+        text += `- ${item.quantity}x ${item.name} (${formatPrice(item.price)})\n`;
+      });
+
+      text += `\n*Total:* ${formatPrice(total)}\n`;
+      text += `\n*Modalidade:* ${deliveryType === "entrega" ? "Entrega" : "Retirada na Loja"}\n`;
+
+      if (deliveryType === "entrega") {
+        text += `*Endereço:* ${address}\n`;
+      }
+
+      const phone = "5517997541174";
+      const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+      window.open(whatsappUrl, "_blank");
+
+      // 4. Limpa o carrinho e mostra sucesso
+      setCart({});
+      setCustomerName("");
+      setAddress("");
+      setOrderSuccess(true);
+    } catch (error) {
+      console.error(error);
+      alert("Houve um erro ao registrar seu pedido. Tente novamente.");
     }
-
-    const phone = "5517997541174";
-    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
-    window.open(whatsappUrl, "_blank");
-
-    setCart({});
-    setCustomerName("");
-    setAddress("");
-    setOrderSuccess(true);
   };
 
   const filteredProducts =
