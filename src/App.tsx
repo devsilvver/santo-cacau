@@ -441,41 +441,43 @@ export default function App() {
                 </div>
 
                 <div className="w-full flex flex-col gap-3 mt-auto">
-                  {/* BOTÃO VERDE DO WHATSAPP */}
-                  <button
-                    onClick={async () => {
-                      // 1. Abre a aba IMEDIATAMENTE (O navegador libera porque é a primeira ação do clique)
-                      window.open("https://wa.me/5517997541174", "_blank");
-
-                      // 2. Usamos o 'await' para forçar o site a aguardar o Firebase,
-                      // impedindo que o navegador congele a aba antes da hora!
+                  {/* BOTÃO VERDE DO WHATSAPP (AGORA É UMA TAG <a>) */}
+                  <a
+                    href="https://wa.me/5517997541174"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => {
+                      // 1. Avisa o Firebase instantaneamente em segundo plano (SEM await)
                       if (createdOrderId) {
-                        try {
-                          await updateDoc(doc(db, "orders", createdOrderId), {
-                            whatsappEnviado: "solicitado",
-                          });
-                        } catch (error) {
-                          console.error("Erro no Firebase:", error);
-                        }
+                        updateDoc(doc(db, "orders", createdOrderId), {
+                          whatsappEnviado: "solicitado",
+                        }).catch((err) =>
+                          console.error("Erro no Firebase:", err),
+                        );
                       }
 
-                      // 3. Somente após o Firebase confirmar, nós limpamos a tela
-                      setCart({});
-                      setCustomerName("");
-                      setCustomerPhone("");
-                      setAddress("");
-                      setDeliveryDate("");
-                      setPaymentMethod("PIX");
-                      setCreatedOrderId(null);
-                      setOrderSuccess(false);
-                      setIsCartMobileOpen(false);
+                      // 2. Atraso de meio segundo (500ms) antes de limpar a tela.
+                      // Isso garante que a nova aba tenha tempo de abrir nativamente
+                      // ANTES do React destruir a tela de sucesso, evitando o congelamento.
+                      setTimeout(() => {
+                        setCart({});
+                        setCustomerName("");
+                        setCustomerPhone("");
+                        setAddress("");
+                        setDeliveryDate("");
+                        setPaymentMethod("PIX");
+                        setCreatedOrderId(null);
+                        setOrderSuccess(false);
+                        setIsCartMobileOpen(false);
+                      }, 500);
                     }}
-                    className="w-full bg-[#25D366] text-white py-4 rounded-xl font-bold text-sm shadow-lg hover:bg-[#20bd5a] transition-all flex items-center justify-center gap-2"
+                    className="w-full bg-[#25D366] text-white py-4 rounded-xl font-bold text-sm shadow-lg hover:bg-[#20bd5a] transition-all flex items-center justify-center gap-2 cursor-pointer text-center"
                   >
                     {paymentMethod === "PIX"
                       ? "Enviar comprovante"
                       : "Acompanhar no WhatsApp"}
-                  </button>
+                  </a>
+
                   <button
                     onClick={() => {
                       setCart({});
