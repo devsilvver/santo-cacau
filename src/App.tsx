@@ -71,6 +71,7 @@ export default function App() {
 
   const [activeCategory, setActiveCategory] = useState("Brigadeiros"); // Categoria Padrão
   const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState(""); // <-- NOVO ESTADO AQUI
   const [deliveryType, setDeliveryType] = useState<DeliveryType>("entrega");
   const [address, setAddress] = useState("");
   const [deliveryDate, setDeliveryDate] = useState(""); // Novo estado: Data de Entrega
@@ -143,6 +144,10 @@ export default function App() {
       alert("Por favor, informe seu nome antes de finalizar o pedido!");
       return;
     }
+    if (!customerPhone || customerPhone.length < 10) {
+      alert("Por favor, informe um número de WhatsApp válido (com DDD)!");
+      return;
+    }
     if (deliveryType === "entrega" && !address) {
       alert("Por favor, informe o endereço de entrega completo!");
       return;
@@ -156,7 +161,6 @@ export default function App() {
       return;
     }
 
-    // Validação de segurança extra para a data
     const selectedDateObj = new Date(deliveryDate + "T00:00:00");
     const minDateObj = new Date(minDeliveryDate + "T00:00:00");
     if (selectedDateObj < minDateObj) {
@@ -168,11 +172,9 @@ export default function App() {
       return;
     }
 
-    // Formata a data para (DD/MM/AAAA)
     const [year, month, day] = deliveryDate.split("-");
     const formattedDate = `${day}/${month}/${year}`;
 
-    // 1. Prepara os dados para o Banco de Dados
     const orderItems = Object.entries(cart).map(([id, quantity]) => {
       const p = products.find((prod) => prod.id === id);
       return { id, name: p?.name || "Produto", price: p?.price || 0, quantity };
@@ -183,45 +185,32 @@ export default function App() {
       total += item.price * item.quantity;
     });
 
+    // 1. Dados atualizados para o Bot processar
     const orderData = {
       customerName,
+      customerPhone, // <-- Guarda o número de telemóvel do cliente
       deliveryType,
       address: deliveryType === "entrega" ? address : "Retirada na loja",
-      deliveryDate: formattedDate, // Nova data vai para a Dashboard
+      deliveryDate: formattedDate,
       total: total,
       status: "Pendente",
+      whatsappEnviado: false, // <-- Sinal vermelho para o Bot enviar a mensagem
       createdAt: Date.now(),
       items: orderItems,
     };
 
     try {
-      // 2. Salva no Firebase
       await addDoc(collection(db, "orders"), orderData);
 
-      // 3. Monta e envia a mensagem do WhatsApp (Limpa e sem emojis)
-      let text = `Olá, Santo Cacau! Gostaria de fazer uma encomenda.\n\n`;
-      text += `*Cliente:* ${customerName}\n\n`;
-      text += `*Pedido:*\n`;
-
-      orderItems.forEach((item) => {
-        text += `- ${item.quantity}x ${item.name} (${formatPrice(item.price)})\n`;
-      });
-
-      text += `\n*Total:* ${formatPrice(total)}\n`;
-      text += `\n*Data Solicitada:* ${formattedDate}\n`;
-      text += `*Modalidade:* ${deliveryType === "entrega" ? "Entrega" : "Retirada na Loja"}\n`;
-
-      if (deliveryType === "entrega") {
-        text += `*Endereço:* ${address}\n`;
-      }
-
+      // 2. Abre a conversa limpa com o WhatsApp da loja (o bot enviará a mensagem)
       const phone = "5517997541174";
-      const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+      const whatsappUrl = `https://wa.me/${phone}`;
       window.open(whatsappUrl, "_blank");
 
-      // 4. Limpa tudo e mostra sucesso
+      // 3. Limpa os dados da encomenda
       setCart({});
       setCustomerName("");
+      setCustomerPhone("");
       setAddress("");
       setDeliveryDate("");
       setOrderSuccess(true);
@@ -486,6 +475,17 @@ export default function App() {
                   className="bg-white/5 border border-white/10 rounded-xl p-3 text-sm focus:border-[#B58E38] outline-none text-white placeholder:text-white/30 transition-all"
                 />
 
+                {/* NOVO CAMPO PARA O WHATSAPP DO CLIENTE */}
+                <input
+                  type="tel"
+                  placeholder="Seu WhatsApp (Ex: 17999999999)"
+                  value={customerPhone}
+                  onChange={(e) =>
+                    setCustomerPhone(e.target.value.replace(/\D/g, ""))
+                  } // Remove tudo o que não for número
+                  className="bg-white/5 border border-white/10 rounded-xl p-3 text-sm focus:border-[#B58E38] outline-none text-white placeholder:text-white/30 transition-all"
+                />
+
                 {/* CALENDÁRIO COM LÓGICA CONDICIONAL */}
                 <div className="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col gap-1">
                   <label className="text-[10px] uppercase font-bold text-[#B58E38] tracking-widest flex items-center gap-1.5">
@@ -560,7 +560,7 @@ export default function App() {
                 <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                   <path d="M12.012 2c-5.508 0-9.987 4.479-9.987 9.988 0 1.757.459 3.41 1.259 4.85l-1.336 4.88 4.996-1.313c1.408.767 3.013 1.206 4.719 1.206 5.507 0 10.02-4.479 10.02-9.988S17.519 2 12.012 2z" />
                 </svg>{" "}
-                Finalizar Pedido
+                Acompanhar pedido no WhatsApp
               </button>
             </div>
           )}
