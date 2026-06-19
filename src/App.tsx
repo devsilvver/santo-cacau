@@ -441,25 +441,18 @@ export default function App() {
                 </div>
 
                 <div className="w-full flex flex-col gap-3 mt-auto">
-                  {/* BOTÃO VERDE DO WHATSAPP (AGORA É UMA TAG <a>) */}
-                  <a
-                    href="https://wa.me/5517997541174"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => {
-                      // 1. Avisa o Firebase instantaneamente em segundo plano (SEM await)
-                      if (createdOrderId) {
-                        updateDoc(doc(db, "orders", createdOrderId), {
-                          whatsappEnviado: "solicitado",
-                        }).catch((err) =>
-                          console.error("Erro no Firebase:", err),
-                        );
-                      }
+                  {/* BOTÃO VERDE DO WHATSAPP */}
+                  <button
+                    onClick={async () => {
+                      try {
+                        // 1. OBRIGA o site a avisar o Firebase e esperar a resposta "OK"
+                        if (createdOrderId) {
+                          await updateDoc(doc(db, "orders", createdOrderId), {
+                            whatsappEnviado: "solicitado",
+                          });
+                        }
 
-                      // 2. Atraso de meio segundo (500ms) antes de limpar a tela.
-                      // Isso garante que a nova aba tenha tempo de abrir nativamente
-                      // ANTES do React destruir a tela de sucesso, evitando o congelamento.
-                      setTimeout(() => {
+                        // 2. Limpa o carrinho e a tela de sucesso
                         setCart({});
                         setCustomerName("");
                         setCustomerPhone("");
@@ -469,14 +462,22 @@ export default function App() {
                         setCreatedOrderId(null);
                         setOrderSuccess(false);
                         setIsCartMobileOpen(false);
-                      }, 500);
+
+                        // 3. Redireciona na MESMA ABA (Isso nunca é bloqueado pelo celular/navegador)
+                        window.location.href = "https://wa.me/5517997541174";
+                      } catch (error) {
+                        console.error("Erro ao avisar o bot:", error);
+                        alert(
+                          "Não foi possível redirecionar. Tente novamente.",
+                        );
+                      }
                     }}
-                    className="w-full bg-[#25D366] text-white py-4 rounded-xl font-bold text-sm shadow-lg hover:bg-[#20bd5a] transition-all flex items-center justify-center gap-2 cursor-pointer text-center"
+                    className="w-full bg-[#25D366] text-white py-4 rounded-xl font-bold text-sm shadow-lg hover:bg-[#20bd5a] transition-all flex items-center justify-center gap-2"
                   >
                     {paymentMethod === "PIX"
                       ? "Enviar comprovante"
                       : "Acompanhar no WhatsApp"}
-                  </a>
+                  </button>
 
                   <button
                     onClick={() => {
