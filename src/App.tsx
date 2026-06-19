@@ -8,7 +8,8 @@ import {
   CalendarDays,
   QrCode,
   CreditCard,
-  Banknote
+  Banknote,
+  Trash2 // <-- NOVO ÍCONE IMPORTADO
 } from "lucide-react";
 import { initializeApp } from "firebase/app";
 import {
@@ -422,7 +423,7 @@ export default function App() {
           /* Estilo Celular */
           inset-x-0 bottom-0 h-[85vh] rounded-t-[32px] p-6
           
-          /* Estilo Desktop (Modal Centralizado perfeitamente travado) */
+          /* Estilo Desktop */
           md:inset-auto md:top-1/2 md:left-1/2 md:h-auto md:max-h-[90vh] md:w-[850px] md:rounded-[32px] md:p-8
           
           ${isCartOpen 
@@ -433,17 +434,34 @@ export default function App() {
         >
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#B58E38] opacity-10 rounded-bl-full pointer-events-none" />
 
+          {/* CABEÇALHO DO MODAL (Com Botão Lixeira) */}
           <div className="flex justify-between items-center mb-6 shrink-0 relative z-10 border-b border-white/10 pb-6">
             <div className="flex items-center gap-3">
               <ShoppingBag className="w-6 h-6 text-[#B58E38]" />
               <h2 className="text-2xl font-serif text-white">Sua Seleção</h2>
             </div>
-            <button
-              onClick={() => setIsCartOpen(false)}
-              className="text-white/50 hover:text-white p-2 transition-colors rounded-full hover:bg-white/5"
-            >
-              <X size={24} />
-            </button>
+            <div className="flex items-center gap-2">
+              {cartItemsCount > 0 && !orderSuccess && (
+                <button
+                  onClick={() => {
+                    if (window.confirm("Deseja esvaziar a sua sacola?")) {
+                      setCart({});
+                    }
+                  }}
+                  className="text-white/40 hover:text-red-400 p-2 transition-colors rounded-full hover:bg-white/5"
+                  title="Esvaziar Sacola"
+                >
+                  <Trash2 size={22} />
+                </button>
+              )}
+              <button
+                onClick={() => setIsCartOpen(false)}
+                className="text-white/50 hover:text-white p-2 transition-colors rounded-full hover:bg-white/5"
+                title="Fechar"
+              >
+                <X size={24} />
+              </button>
+            </div>
           </div>
 
           {/* Oculta scrollbars NATIVAMENTE mantendo o scroll funcionando apenas onde deve */}
