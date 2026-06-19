@@ -443,20 +443,23 @@ export default function App() {
                 <div className="w-full flex flex-col gap-3 mt-auto">
                   {/* BOTÃO VERDE DO WHATSAPP */}
                   <button
-                    onClick={() => {
-                      // 1. Abre a aba do WhatsApp IMEDIATAMENTE (sem bloqueios do navegador)
+                    onClick={async () => {
+                      // 1. Abre a aba IMEDIATAMENTE (O navegador libera porque é a primeira ação do clique)
                       window.open("https://wa.me/5517997541174", "_blank");
 
-                      // 2. Avisa o bot no banco de dados em segundo plano
+                      // 2. Usamos o 'await' para forçar o site a aguardar o Firebase,
+                      // impedindo que o navegador congele a aba antes da hora!
                       if (createdOrderId) {
-                        updateDoc(doc(db, "orders", createdOrderId), {
-                          whatsappEnviado: "solicitado",
-                        }).catch((err) =>
-                          console.error("Erro ao avisar o bot:", err),
-                        );
+                        try {
+                          await updateDoc(doc(db, "orders", createdOrderId), {
+                            whatsappEnviado: "solicitado",
+                          });
+                        } catch (error) {
+                          console.error("Erro no Firebase:", error);
+                        }
                       }
 
-                      // 3. Limpa o carrinho e volta ao menu na mesma hora
+                      // 3. Somente após o Firebase confirmar, nós limpamos a tela
                       setCart({});
                       setCustomerName("");
                       setCustomerPhone("");
@@ -473,7 +476,6 @@ export default function App() {
                       ? "Enviar comprovante"
                       : "Acompanhar no WhatsApp"}
                   </button>
-
                   <button
                     onClick={() => {
                       setCart({});
