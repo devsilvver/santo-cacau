@@ -759,7 +759,7 @@ export default function App() {
 
       <footer className="py-6 flex items-center justify-center shrink-0 hidden md:flex mt-auto">
         <p className="text-[10px] text-[#2A1610]/40 font-semibold tracking-[0.2em] uppercase">
-          Santo Cacau &bull; O Sabor da Intensidade &bull; (17) 99754-1174
+          Santo Cacau &bull; O Sabor da Intensidade &bull; (17) 99792-1209
         </p>
       </footer>
     </div>
