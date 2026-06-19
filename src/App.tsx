@@ -63,7 +63,7 @@ export default function App() {
 
   // Controle do Modal do Carrinho
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [showAllItems, setShowAllItems] = useState(false); // NOVO: Controle de itens visíveis
+  const [showAllItems, setShowAllItems] = useState(false); // Controle de itens visíveis
 
   const [cart, setCart] = useState<Record<string, number>>(() => {
     const savedCart = localStorage.getItem("@santo-cacau:cart");
@@ -256,7 +256,6 @@ export default function App() {
     return Object.values(cart).reduce((sum, qty) => sum + qty, 0);
   }, [cart]);
 
-  // Helper para o carrinho não estourar a tela
   const cartEntries = Object.entries(cart).filter(([id]) => products.some(p => p.id === id));
 
   return (
@@ -426,8 +425,8 @@ export default function App() {
           /* Estilo Celular (Aparece de baixo) */
           inset-x-0 bottom-0 h-[85vh] rounded-t-[32px] p-6
           
-          /* Estilo Desktop (Modal Centralizado) */
-          md:inset-auto md:top-1/2 md:left-1/2 md:h-auto md:w-[800px] md:rounded-[32px] md:p-8
+          /* Estilo Desktop (Modal Centralizado com altura máxima travada) */
+          md:inset-auto md:top-1/2 md:left-1/2 md:h-auto md:max-h-[90vh] md:w-[800px] md:rounded-[32px] md:p-8
           
           ${isCartOpen 
             ? "translate-y-0 md:-translate-x-1/2 md:-translate-y-1/2 md:opacity-100 md:scale-100 md:pointer-events-auto" 
@@ -450,7 +449,6 @@ export default function App() {
             </button>
           </div>
 
-          {/* Oculta scrollbars nativamente mantendo o scroll funcionando */}
           <div className="flex-1 overflow-y-auto pr-2 mb-4 relative z-10 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {orderSuccess ? (
               <div className="h-full flex flex-col items-center justify-center text-center gap-4 text-white animate-in fade-in duration-500 pb-4">
@@ -532,8 +530,8 @@ export default function App() {
               </div>
             ) : (
               <div className="md:grid md:grid-cols-2 md:gap-8 h-full">
-                {/* LADO ESQUERDO: OS ITENS (COM BOTÃO DE VER MAIS) */}
-                <div className="flex flex-col gap-4 mb-8 md:mb-0">
+                {/* LADO ESQUERDO: OS ITENS (COM SCROLL INTERNO INVISÍVEL) */}
+                <div className="flex flex-col gap-2 mb-8 md:mb-0">
                   <h3 className="hidden md:flex text-[#B58E38] font-bold text-xs uppercase tracking-widest mb-2 border-b border-white/10 pb-2">
                     Itens na Sacola
                   </h3>
@@ -543,32 +541,35 @@ export default function App() {
                       A sua sacola está vazia.<br />Adicione as nossas delícias!
                     </div>
                   ) : (
-                    <div className="space-y-4">
-                      {cartEntries
-                        .slice(0, showAllItems ? undefined : 3)
-                        .map(([id, quantity]) => {
-                        const product = products.find((p) => p.id === id);
-                        if (!product) return null;
-                        return (
-                          <div key={id} className="flex justify-between items-center text-sm pb-3 border-b border-white/5">
-                            <span className="text-white/90 flex-1 pr-2 truncate">
-                              <span className="font-mono text-[#B58E38] font-bold mr-3 bg-[#B58E38]/10 px-2 py-1 rounded-md">
-                                {quantity}x
+                    <>
+                      {/* CAIXA COM SCROLL INTERNO QUANDO EXPANDIDA */}
+                      <div className={`space-y-4 transition-all duration-300 ${showAllItems ? "max-h-[260px] overflow-y-auto pr-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]" : ""}`}>
+                        {cartEntries
+                          .slice(0, showAllItems ? undefined : 3)
+                          .map(([id, quantity]) => {
+                          const product = products.find((p) => p.id === id);
+                          if (!product) return null;
+                          return (
+                            <div key={id} className="flex justify-between items-center text-sm pb-3 border-b border-white/5">
+                              <span className="text-white/90 flex-1 pr-2 truncate">
+                                <span className="font-mono text-[#B58E38] font-bold mr-3 bg-[#B58E38]/10 px-2 py-1 rounded-md">
+                                  {quantity}x
+                                </span>
+                                {product.name}
                               </span>
-                              {product.name}
-                            </span>
-                            <span className="font-bold text-[#B58E38] whitespace-nowrap">
-                              {formatPrice(product.price * quantity)}
-                            </span>
-                          </div>
-                        );
-                      })}
+                              <span className="font-bold text-[#B58E38] whitespace-nowrap">
+                                {formatPrice(product.price * quantity)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
 
-                      {/* BOTÃO MÁGICO DE VER MAIS / MOSTRAR MENOS */}
+                      {/* BOTÃO MÁGICO FORA DO SCROLL */}
                       {cartEntries.length > 3 && (
                         <button
                           onClick={() => setShowAllItems(!showAllItems)}
-                          className="w-full py-3 mt-2 text-[11px] uppercase tracking-widest font-bold rounded-xl transition-all border border-[#B58E38]/20 text-[#B58E38] hover:bg-[#B58E38]/10 flex items-center justify-center gap-2"
+                          className="w-full py-3 mt-2 text-[11px] uppercase tracking-widest font-bold rounded-xl transition-all border border-[#B58E38]/20 text-[#B58E38] hover:bg-[#B58E38]/10 flex items-center justify-center gap-2 shrink-0"
                         >
                           {showAllItems 
                             ? "Ocultar Itens" 
@@ -577,11 +578,11 @@ export default function App() {
                           <ChevronDown size={14} className={`transition-transform ${showAllItems ? "rotate-180" : ""}`} />
                         </button>
                       )}
-                    </div>
+                    </>
                   )}
                 </div>
 
-                {/* LADO DIREITO: O FORMULÁRIO (ALTURAS TRAVADAS) */}
+                {/* LADO DIREITO: O FORMULÁRIO */}
                 <div className="flex flex-col gap-4">
                   <h3 className="hidden md:flex text-[#B58E38] font-bold text-xs uppercase tracking-widest mb-2 border-b border-white/10 pb-2">
                     Detalhes do Pedido
@@ -665,7 +666,6 @@ export default function App() {
                     </button>
                   </div>
 
-                  {/* ALTURAS TRAVADAS (h-[88px]) PARA EVITAR QUEBRA DE LAYOUT */}
                   {deliveryType === "entrega" ? (
                     <textarea
                       placeholder="Endereço (Rua, Número, Bairro...)"
