@@ -484,7 +484,7 @@ export default function App() {
                         Nossa Chave PIX (Celular)
                       </p>
                       <p className="font-mono text-2xl text-[#B58E38] font-bold select-all mb-3 bg-[#B58E38]/10 py-2 rounded-xl border border-[#B58E38]/20">
-                        17997541174
+                        17997921209
                       </p>
                       <p className="text-xs text-white/60 leading-relaxed">
                         Faça o pagamento e envie o comprovante no nosso WhatsApp para iniciarmos a produção.
@@ -500,7 +500,7 @@ export default function App() {
 
                 <div className="w-full max-w-[320px] flex flex-col gap-3">
                   <a
-                    href="https://wa.me/5517997541174"
+                    href="https://wa.me/5517997921209"
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => {
