@@ -14,7 +14,7 @@ import {
   onSnapshot,
   query,
   addDoc,
-  setDoc,
+  updateDoc,
   doc,
 } from "firebase/firestore";
 
@@ -441,32 +441,24 @@ export default function App() {
                 </div>
 
                 <div className="w-full flex flex-col gap-3 mt-auto">
-                  {/* BOTÃO VERDE DO WHATSAPP */}
-                  <button
+                  {/* BOTÃO VERDE DO WHATSAPP (A VERSÃO DEFINITIVA E MAIS RECOMENDADA) */}
+                  <a
+                    href="https://wa.me/5517997541174"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     onClick={() => {
+                      // 1. Atualiza o banco de dados instantaneamente (agora que o Firebase permite!)
                       if (createdOrderId) {
-                        // 1. Forçamos a atualização com setDoc (mais estável no React)
-                        setDoc(
-                          doc(db, "orders", createdOrderId),
-                          {
-                            whatsappEnviado: "solicitado",
-                          },
-                          { merge: true },
-                        )
-                          .then(() => {
-                            // 2. SÓ DEPOIS que o Firebase salva, nós vamos para o WhatsApp.
-                            // Usar window.location.href evita o bloqueio de pop-ups dos celulares!
-                            window.location.href =
-                              "https://wa.me/5517997541174";
-                          })
-                          .catch((erro) => {
-                            console.error("Erro interno ignorado:", erro);
-                            // Mesmo se a internet oscilar, libera o cliente pro WhatsApp
-                            window.location.href =
-                              "https://wa.me/5517997541174";
-                          });
+                        updateDoc(doc(db, "orders", createdOrderId), {
+                          whatsappEnviado: "solicitado",
+                        }).catch((err) =>
+                          console.error("Erro interno do Firebase:", err),
+                        );
+                      }
 
-                        // 3. Limpa a tela imediatamente para o cliente ver que funcionou
+                      // 2. Atraso de meio segundo apenas para garantir que a aba do WhatsApp
+                      // abra perfeitamente antes de o React "limpar" a tela de sucesso.
+                      setTimeout(() => {
                         setCart({});
                         setCustomerName("");
                         setCustomerPhone("");
@@ -476,17 +468,14 @@ export default function App() {
                         setCreatedOrderId(null);
                         setOrderSuccess(false);
                         setIsCartMobileOpen(false);
-                      } else {
-                        // Prevenção extra
-                        window.location.href = "https://wa.me/5517997541174";
-                      }
+                      }, 500);
                     }}
-                    className="w-full bg-[#25D366] text-white py-4 rounded-xl font-bold text-sm shadow-lg hover:bg-[#20bd5a] transition-all flex items-center justify-center gap-2"
+                    className="w-full bg-[#25D366] text-white py-4 rounded-xl font-bold text-sm shadow-lg hover:bg-[#20bd5a] transition-all flex items-center justify-center gap-2 cursor-pointer text-center inline-flex"
                   >
                     {paymentMethod === "PIX"
                       ? "Enviar comprovante"
                       : "Acompanhar no WhatsApp"}
-                  </button>
+                  </a>
 
                   <button
                     onClick={() => {
