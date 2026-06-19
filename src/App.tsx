@@ -443,22 +443,27 @@ export default function App() {
                 <div className="w-full flex flex-col gap-3 mt-auto">
                   {/* BOTÃO VERDE DO WHATSAPP */}
                   <button
-                    onClick={async () => {
-                      // Se tem um pedido criado, muda a tag para o Bot disparar
-                      if (createdOrderId) {
-                        await updateDoc(doc(db, "orders", createdOrderId), {
-                          whatsappEnviado: "solicitado",
-                        });
-                      }
+                    onClick={() => {
+                      // 1. Abre a aba do WhatsApp IMEDIATAMENTE (sem bloqueios do navegador)
                       window.open("https://wa.me/5517997541174", "_blank");
 
+                      // 2. Avisa o bot no banco de dados em segundo plano
+                      if (createdOrderId) {
+                        updateDoc(doc(db, "orders", createdOrderId), {
+                          whatsappEnviado: "solicitado",
+                        }).catch((err) =>
+                          console.error("Erro ao avisar o bot:", err),
+                        );
+                      }
+
+                      // 3. Limpa o carrinho e volta ao menu na mesma hora
                       setCart({});
                       setCustomerName("");
                       setCustomerPhone("");
                       setAddress("");
                       setDeliveryDate("");
                       setPaymentMethod("PIX");
-                      setCreatedOrderId(null); // <-- Limpa o ID
+                      setCreatedOrderId(null);
                       setOrderSuccess(false);
                       setIsCartMobileOpen(false);
                     }}
