@@ -71,7 +71,8 @@ export default function App() {
 
   const [activeCategory, setActiveCategory] = useState("Brigadeiros"); // Categoria Padrão
   const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState(""); // <-- NOVO ESTADO AQUI
+  const [customerPhone, setCustomerPhone] = useState(""); // <-- NOVO ESTADO
+  const [paymentMethod, setPaymentMethod] = useState("PIX");
   const [deliveryType, setDeliveryType] = useState<DeliveryType>("entrega");
   const [address, setAddress] = useState("");
   const [deliveryDate, setDeliveryDate] = useState(""); // Novo estado: Data de Entrega
@@ -139,13 +140,13 @@ export default function App() {
     return d.toISOString().split("T")[0];
   }, [totalBrigadeiros]);
 
-  const handleSendWhatsApp = async () => {
+  const handleFinalizeOrder = async () => {
     if (!customerName) {
       alert("Por favor, informe seu nome antes de finalizar o pedido!");
       return;
     }
     if (!customerPhone || customerPhone.length < 10) {
-      alert("Por favor, informe um número de WhatsApp válido (com DDD)!");
+      alert("Por favor, informe um número de WhatsApp válido!");
       return;
     }
     if (deliveryType === "entrega" && !address) {
@@ -185,34 +186,23 @@ export default function App() {
       total += item.price * item.quantity;
     });
 
-    // 1. Dados atualizados para o Bot processar
     const orderData = {
       customerName,
-      customerPhone, // <-- Guarda o número de telemóvel do cliente
+      customerPhone,
       deliveryType,
+      paymentMethod, // <-- Informação do pagamento indo para o banco
       address: deliveryType === "entrega" ? address : "Retirada na loja",
       deliveryDate: formattedDate,
       total: total,
       status: "Pendente",
-      whatsappEnviado: false, // <-- Sinal vermelho para o Bot enviar a mensagem
+      whatsappEnviado: false,
       createdAt: Date.now(),
       items: orderItems,
     };
 
     try {
       await addDoc(collection(db, "orders"), orderData);
-
-      // 2. Abre a conversa limpa com o WhatsApp da loja (o bot enviará a mensagem)
-      const phone = "5517997541174";
-      const whatsappUrl = `https://wa.me/${phone}`;
-      window.open(whatsappUrl, "_blank");
-
-      // 3. Limpa os dados da encomenda
-      setCart({});
-      setCustomerName("");
-      setCustomerPhone("");
-      setAddress("");
-      setDeliveryDate("");
+      // Aqui nós NÃO abrimos o wa.me. Apenas mostramos a tela de sucesso!
       setOrderSuccess(true);
     } catch (error) {
       console.error(error);
@@ -409,9 +399,10 @@ export default function App() {
             </button>
           </div>
 
+          {/* ÁREA DO MEIO: ITENS DO CARRINHO E TELA DE SUCESSO */}
           <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-2 mb-4 scrollbar-hide min-h-[200px] relative z-10">
             {orderSuccess ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center gap-4 text-white animate-in fade-in duration-500">
+              <div className="flex-1 flex flex-col items-center justify-center text-center gap-4 text-white animate-in fade-in duration-500 pb-4">
                 <div className="w-16 h-16 bg-[#B58E38]/20 text-[#B58E38] rounded-full flex items-center justify-center mb-2">
                   <svg className="w-8 h-8 fill-current" viewBox="0 0 24 24">
                     <path d="M12.012 2c-5.508 0-9.987 4.479-9.987 9.988 0 1.757.459 3.41 1.259 4.85l-1.336 4.88 4.996-1.313c1.408.767 3.013 1.206 4.719 1.206 5.507 0 10.02-4.479 10.02-9.988S17.519 2 12.012 2z" />
@@ -419,22 +410,68 @@ export default function App() {
                 </div>
                 <div>
                   <h3 className="font-serif text-2xl font-bold mb-2 text-[#B58E38]">
-                    Encomenda Gerada!
+                    Pedido Registrado!
                   </h3>
-                  <p className="text-sm text-white/70 leading-relaxed max-w-[250px] mx-auto">
-                    Sua sacola foi salva. Finalize os detalhes diretamente no
-                    WhatsApp.
-                  </p>
+
+                  {paymentMethod === "PIX" ? (
+                    <div className="bg-white/5 border border-white/10 p-4 rounded-xl mb-4 w-full max-w-[280px] mx-auto text-center">
+                      <p className="text-xs text-white/80 mb-2 uppercase tracking-wider font-bold">
+                        Nossa Chave PIX (Celular)
+                      </p>
+                      <p className="font-mono text-2xl text-[#B58E38] font-bold select-all mb-2">
+                        17997541174
+                      </p>
+                      <p className="text-[11px] text-white/50 leading-relaxed">
+                        Sua encomenda já está no nosso sistema. Faça o pagamento
+                        e envie o comprovante no nosso WhatsApp para iniciarmos
+                        a produção.
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-white/70 leading-relaxed max-w-[250px] mx-auto mb-4">
+                      Sua encomenda já está no nosso sistema. O pagamento será
+                      feito na{" "}
+                      {deliveryType === "entrega" ? "entrega" : "retirada"}.
+                    </p>
+                  )}
                 </div>
-                <button
-                  onClick={() => {
-                    setOrderSuccess(false);
-                    setIsCartMobileOpen(false);
-                  }}
-                  className="mt-6 px-8 py-3 bg-[#B58E38] rounded-full text-sm font-bold text-white shadow-sm hover:bg-[#9E7A2E] transition-all"
-                >
-                  Nova Encomenda
-                </button>
+
+                <div className="w-full flex flex-col gap-3 mt-auto">
+                  <button
+                    onClick={() => {
+                      window.open("https://wa.me/5517997541174", "_blank");
+                      setCart({});
+                      setCustomerName("");
+                      setCustomerPhone("");
+                      setAddress("");
+                      setDeliveryDate("");
+                      setPaymentMethod("PIX");
+                      setOrderSuccess(false);
+                      setIsCartMobileOpen(false);
+                    }}
+                    className="w-full bg-[#25D366] text-white py-4 rounded-xl font-bold text-sm shadow-lg hover:bg-[#20bd5a] transition-all flex items-center justify-center gap-2"
+                  >
+                    {paymentMethod === "PIX"
+                      ? "Enviar comprovante"
+                      : "Acompanhar no WhatsApp"}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setCart({});
+                      setCustomerName("");
+                      setCustomerPhone("");
+                      setAddress("");
+                      setDeliveryDate("");
+                      setPaymentMethod("PIX");
+                      setOrderSuccess(false);
+                      setIsCartMobileOpen(false);
+                    }}
+                    className="w-full bg-white/5 text-white/70 py-4 rounded-xl font-bold text-sm hover:bg-white/10 transition-all"
+                  >
+                    Voltar ao Menu
+                  </button>
+                </div>
               </div>
             ) : Object.entries(cart).length === 0 ? (
               <div className="flex-1 flex items-center justify-center text-center text-white/30 text-sm font-serif italic">
@@ -475,18 +512,33 @@ export default function App() {
                   className="bg-white/5 border border-white/10 rounded-xl p-3 text-sm focus:border-[#B58E38] outline-none text-white placeholder:text-white/30 transition-all"
                 />
 
-                {/* NOVO CAMPO PARA O WHATSAPP DO CLIENTE */}
                 <input
                   type="tel"
                   placeholder="Seu WhatsApp (Ex: 17999999999)"
                   value={customerPhone}
                   onChange={(e) =>
                     setCustomerPhone(e.target.value.replace(/\D/g, ""))
-                  } // Remove tudo o que não for número
+                  }
                   className="bg-white/5 border border-white/10 rounded-xl p-3 text-sm focus:border-[#B58E38] outline-none text-white placeholder:text-white/30 transition-all"
                 />
 
-                {/* CALENDÁRIO COM LÓGICA CONDICIONAL */}
+                <div className="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col gap-1">
+                  <label className="text-[10px] uppercase font-bold text-[#B58E38] tracking-widest">
+                    Forma de Pagamento
+                  </label>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="w-full bg-transparent text-sm focus:outline-none text-white transition-all [&>option]:text-black cursor-pointer"
+                  >
+                    <option value="PIX">PIX</option>
+                    <option value="Cartão de Crédito/Débito">
+                      Cartão (Na entrega/retirada)
+                    </option>
+                    <option value="Dinheiro">Dinheiro vivo</option>
+                  </select>
+                </div>
+
                 <div className="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col gap-1">
                   <label className="text-[10px] uppercase font-bold text-[#B58E38] tracking-widest flex items-center gap-1.5">
                     <CalendarDays size={12} /> Data Desejada
@@ -500,8 +552,8 @@ export default function App() {
                   />
                   {totalBrigadeiros > 50 && (
                     <span className="text-[10px] text-yellow-500/90 leading-tight mt-1 border-t border-white/10 pt-1.5">
-                      ⚠️ Acima de 50 brigadeiros, o prazo mínimo de entrega é de
-                      1 semana.
+                      ⚠️ Acima de 50 brigadeiros, o prazo mínimo de entrega é 1
+                      semana.
                     </span>
                   )}
                 </div>
@@ -520,6 +572,7 @@ export default function App() {
                     <Store className="w-3 h-3 md:w-4 md:h-4" /> Retirada
                   </button>
                 </div>
+
                 {deliveryType === "entrega" ? (
                   <textarea
                     placeholder="Endereço (Rua, Número, Bairro...)"
@@ -542,6 +595,7 @@ export default function App() {
             )}
           </div>
 
+          {/* RODAPÉ DO CARRINHO (BOTÃO DE FINALIZAR) */}
           {!orderSuccess && (
             <div className="pt-4 shrink-0 relative z-10 border-t border-white/10">
               <div className="flex justify-between items-end mb-4">
@@ -553,14 +607,14 @@ export default function App() {
                 </span>
               </div>
               <button
-                onClick={handleSendWhatsApp}
+                onClick={handleFinalizeOrder}
                 disabled={Object.keys(cart).length === 0}
                 className="w-full bg-[#B58E38] text-white py-4 rounded-xl font-bold text-sm shadow-lg hover:bg-[#9E7A2E] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:pointer-events-none"
               >
                 <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                   <path d="M12.012 2c-5.508 0-9.987 4.479-9.987 9.988 0 1.757.459 3.41 1.259 4.85l-1.336 4.88 4.996-1.313c1.408.767 3.013 1.206 4.719 1.206 5.507 0 10.02-4.479 10.02-9.988S17.519 2 12.012 2z" />
                 </svg>{" "}
-                Acompanhar pedido no WhatsApp
+                Finalizar Pedido
               </button>
             </div>
           )}
