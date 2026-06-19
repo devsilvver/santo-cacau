@@ -14,6 +14,8 @@ import {
   onSnapshot,
   query,
   addDoc,
+  updateDoc,
+  doc,
 } from "firebase/firestore";
 
 // ==========================================
@@ -77,6 +79,7 @@ export default function App() {
   const [address, setAddress] = useState("");
   const [deliveryDate, setDeliveryDate] = useState(""); // Novo estado: Data de Entrega
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     const q = query(collection(db, "products"));
@@ -195,13 +198,14 @@ export default function App() {
       deliveryDate: formattedDate,
       total: total,
       status: "Pendente",
-      whatsappEnviado: false,
+      whatsappEnviado: "nao_solicitado",
       createdAt: Date.now(),
       items: orderItems,
     };
 
     try {
-      await addDoc(collection(db, "orders"), orderData);
+      const docRef = await addDoc(collection(db, "orders"), orderData);
+      setCreatedOrderId(docRef.id);
       // Aqui nós NÃO abrimos o wa.me. Apenas mostramos a tela de sucesso!
       setOrderSuccess(true);
     } catch (error) {
@@ -437,15 +441,24 @@ export default function App() {
                 </div>
 
                 <div className="w-full flex flex-col gap-3 mt-auto">
+                  {/* BOTÃO VERDE DO WHATSAPP */}
                   <button
-                    onClick={() => {
+                    onClick={async () => {
+                      // Se tem um pedido criado, muda a tag para o Bot disparar
+                      if (createdOrderId) {
+                        await updateDoc(doc(db, "orders", createdOrderId), {
+                          whatsappEnviado: "solicitado",
+                        });
+                      }
                       window.open("https://wa.me/5517997541174", "_blank");
+
                       setCart({});
                       setCustomerName("");
                       setCustomerPhone("");
                       setAddress("");
                       setDeliveryDate("");
                       setPaymentMethod("PIX");
+                      setCreatedOrderId(null); // <-- Limpa o ID
                       setOrderSuccess(false);
                       setIsCartMobileOpen(false);
                     }}
@@ -464,6 +477,7 @@ export default function App() {
                       setAddress("");
                       setDeliveryDate("");
                       setPaymentMethod("PIX");
+                      setCreatedOrderId(null); // <-- Limpa o ID
                       setOrderSuccess(false);
                       setIsCartMobileOpen(false);
                     }}
