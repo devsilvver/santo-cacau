@@ -63,7 +63,7 @@ export default function App() {
 
   // Controle do Modal do Carrinho
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [showAllItems, setShowAllItems] = useState(false); // Controle de itens visíveis
+  const [showAllItems, setShowAllItems] = useState(false);
 
   const [cart, setCart] = useState<Record<string, number>>(() => {
     const savedCart = localStorage.getItem("@santo-cacau:cart");
@@ -85,7 +85,7 @@ export default function App() {
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
 
-  // Resetar a lista de itens quando o modal fechar
+  // Fecha a lista expandida se o usuário fechar a sacola
   useEffect(() => {
     if (!isCartOpen) setShowAllItems(false);
   }, [isCartOpen]);
@@ -124,7 +124,6 @@ export default function App() {
     });
   };
 
-  // MÁSCARA AUTOMÁTICA DO WHATSAPP
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, "");
     if (value.length > 11) value = value.slice(0, 11);
@@ -139,7 +138,6 @@ export default function App() {
     setCustomerPhone(formatted);
   };
 
-  // LÓGICA DE DATAS
   const totalBrigadeiros = useMemo(() => {
     let count = 0;
     Object.entries(cart).forEach(([id, quantity]) => {
@@ -165,7 +163,6 @@ export default function App() {
     setDeliveryDate(minDeliveryDate);
   }, [minDeliveryDate]);
 
-  // FINALIZAÇÃO DE PEDIDO
   const handleFinalizeOrder = async () => {
     const rawPhone = customerPhone.replace(/\D/g, "");
 
@@ -422,11 +419,11 @@ export default function App() {
           fixed z-50 flex flex-col bg-[#2A1610] shadow-2xl transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]
           overflow-hidden
           
-          /* Estilo Celular (Aparece de baixo) */
+          /* Estilo Celular */
           inset-x-0 bottom-0 h-[85vh] rounded-t-[32px] p-6
           
-          /* Estilo Desktop (Modal Centralizado com altura máxima travada) */
-          md:inset-auto md:top-1/2 md:left-1/2 md:h-auto md:max-h-[90vh] md:w-[800px] md:rounded-[32px] md:p-8
+          /* Estilo Desktop (Modal Centralizado perfeitamente travado) */
+          md:inset-auto md:top-1/2 md:left-1/2 md:h-auto md:max-h-[90vh] md:w-[850px] md:rounded-[32px] md:p-8
           
           ${isCartOpen 
             ? "translate-y-0 md:-translate-x-1/2 md:-translate-y-1/2 md:opacity-100 md:scale-100 md:pointer-events-auto" 
@@ -449,7 +446,8 @@ export default function App() {
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto pr-2 mb-4 relative z-10 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          {/* Oculta scrollbars NATIVAMENTE mantendo o scroll funcionando apenas onde deve */}
+          <div className="flex-1 overflow-y-auto pr-1 md:pr-0 mb-4 relative z-10 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {orderSuccess ? (
               <div className="h-full flex flex-col items-center justify-center text-center gap-4 text-white animate-in fade-in duration-500 pb-4">
                 <div className="w-20 h-20 bg-[#B58E38]/20 text-[#B58E38] rounded-full flex items-center justify-center mb-2">
@@ -530,9 +528,10 @@ export default function App() {
               </div>
             ) : (
               <div className="md:grid md:grid-cols-2 md:gap-8 h-full">
-                {/* LADO ESQUERDO: OS ITENS (COM SCROLL INTERNO INVISÍVEL) */}
+                
+                {/* LADO ESQUERDO: OS ITENS (COM ALTURA TRAVADA E SCROLL INVISÍVEL) */}
                 <div className="flex flex-col gap-2 mb-8 md:mb-0">
-                  <h3 className="hidden md:flex text-[#B58E38] font-bold text-xs uppercase tracking-widest mb-2 border-b border-white/10 pb-2">
+                  <h3 className="hidden md:flex text-[#B58E38] font-bold text-xs uppercase tracking-widest mb-2 border-b border-white/10 pb-2 shrink-0">
                     Itens na Sacola
                   </h3>
                   
@@ -542,38 +541,43 @@ export default function App() {
                     </div>
                   ) : (
                     <>
-                      {/* CAIXA COM SCROLL INTERNO QUANDO EXPANDIDA */}
-                      <div className={`space-y-4 transition-all duration-300 ${showAllItems ? "max-h-[260px] overflow-y-auto pr-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]" : ""}`}>
-                        {cartEntries
-                          .slice(0, showAllItems ? undefined : 3)
-                          .map(([id, quantity]) => {
-                          const product = products.find((p) => p.id === id);
-                          if (!product) return null;
-                          return (
-                            <div key={id} className="flex justify-between items-center text-sm pb-3 border-b border-white/5">
-                              <span className="text-white/90 flex-1 pr-2 truncate">
-                                <span className="font-mono text-[#B58E38] font-bold mr-3 bg-[#B58E38]/10 px-2 py-1 rounded-md">
-                                  {quantity}x
+                      <div className={`transition-all duration-300 ease-in-out pr-1 ${
+                        showAllItems 
+                          ? "max-h-[240px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]" 
+                          : "max-h-[140px] overflow-hidden"
+                      }`}>
+                        <div className="flex flex-col gap-3">
+                          {cartEntries
+                            .slice(0, showAllItems ? undefined : 3)
+                            .map(([id, quantity]) => {
+                            const product = products.find((p) => p.id === id);
+                            if (!product) return null;
+                            return (
+                              <div key={id} className="flex justify-between items-center text-sm pb-3 border-b border-white/5 shrink-0">
+                                <span className="text-white/90 flex-1 pr-2 truncate">
+                                  <span className="font-mono text-[#B58E38] font-bold mr-3 bg-[#B58E38]/10 px-2 py-1 rounded-md">
+                                    {quantity}x
+                                  </span>
+                                  {product.name}
                                 </span>
-                                {product.name}
-                              </span>
-                              <span className="font-bold text-[#B58E38] whitespace-nowrap">
-                                {formatPrice(product.price * quantity)}
-                              </span>
-                            </div>
-                          );
-                        })}
+                                <span className="font-bold text-[#B58E38] whitespace-nowrap">
+                                  {formatPrice(product.price * quantity)}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
 
-                      {/* BOTÃO MÁGICO FORA DO SCROLL */}
+                      {/* BOTÃO MÁGICO DE VER MAIS */}
                       {cartEntries.length > 3 && (
                         <button
                           onClick={() => setShowAllItems(!showAllItems)}
-                          className="w-full py-3 mt-2 text-[11px] uppercase tracking-widest font-bold rounded-xl transition-all border border-[#B58E38]/20 text-[#B58E38] hover:bg-[#B58E38]/10 flex items-center justify-center gap-2 shrink-0"
+                          className="w-full py-2.5 mt-2 text-[10px] md:text-[11px] uppercase tracking-widest font-bold rounded-xl transition-all border border-[#B58E38]/20 text-[#B58E38] hover:bg-[#B58E38]/10 flex items-center justify-center gap-2 shrink-0"
                         >
                           {showAllItems 
                             ? "Ocultar Itens" 
-                            : `Ver mais ${cartEntries.length - 3} ite${cartEntries.length - 3 > 1 ? 'ns' : 'm'}`
+                            : `Ver todos os ${cartEntries.length} itens`
                           }
                           <ChevronDown size={14} className={`transition-transform ${showAllItems ? "rotate-180" : ""}`} />
                         </button>
@@ -582,9 +586,9 @@ export default function App() {
                   )}
                 </div>
 
-                {/* LADO DIREITO: O FORMULÁRIO */}
+                {/* LADO DIREITO: O FORMULÁRIO (TOTALMENTE ESTÁTICO) */}
                 <div className="flex flex-col gap-4">
-                  <h3 className="hidden md:flex text-[#B58E38] font-bold text-xs uppercase tracking-widest mb-2 border-b border-white/10 pb-2">
+                  <h3 className="hidden md:flex text-[#B58E38] font-bold text-xs uppercase tracking-widest mb-2 border-b border-white/10 pb-2 shrink-0">
                     Detalhes do Pedido
                   </h3>
 
@@ -593,7 +597,7 @@ export default function App() {
                     placeholder="Nome do Cliente"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
-                    className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-sm focus:border-[#B58E38] outline-none text-white placeholder:text-white/40 transition-all w-full"
+                    className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-sm focus:border-[#B58E38] outline-none text-white placeholder:text-white/40 transition-all w-full shrink-0"
                   />
 
                   <input
@@ -602,10 +606,10 @@ export default function App() {
                     value={customerPhone}
                     onChange={handlePhoneChange}
                     maxLength={15}
-                    className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-sm focus:border-[#B58E38] outline-none text-white placeholder:text-white/40 transition-all w-full"
+                    className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-sm focus:border-[#B58E38] outline-none text-white placeholder:text-white/40 transition-all w-full shrink-0"
                   />
 
-                  <div className="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col gap-2 w-full">
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col gap-2 w-full shrink-0">
                     <label className="text-[10px] uppercase font-bold text-[#B58E38] tracking-widest text-center md:text-left">
                       Forma de Pagamento
                     </label>
@@ -633,7 +637,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col gap-2 w-full">
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col gap-2 w-full shrink-0">
                     <label className="text-[10px] uppercase font-bold text-[#B58E38] tracking-widest flex items-center gap-1.5">
                       <CalendarDays size={12} /> Data Desejada
                     </label>
@@ -651,7 +655,7 @@ export default function App() {
                     )}
                   </div>
 
-                  <div className="flex gap-2 bg-white/5 p-1 rounded-xl border border-white/10 w-full">
+                  <div className="flex gap-2 bg-white/5 p-1 rounded-xl border border-white/10 w-full shrink-0">
                     <button
                       onClick={() => setDeliveryType("entrega")}
                       className={`flex-1 py-2.5 text-[10px] md:text-xs uppercase font-bold rounded-lg transition-all flex items-center justify-center gap-2 shrink-0 ${deliveryType === "entrega" ? "bg-[#B58E38] text-white shadow-md" : "text-white/50 hover:text-white"}`}
@@ -666,6 +670,7 @@ export default function App() {
                     </button>
                   </div>
 
+                  {/* ALTURAS TRAVADAS (h-[88px]) PARA EVITAR QUEBRA DE LAYOUT */}
                   {deliveryType === "entrega" ? (
                     <textarea
                       placeholder="Endereço (Rua, Número, Bairro...)"
@@ -710,7 +715,7 @@ export default function App() {
           )}
         </aside>
 
-        {/* BOTÃO FLUTUANTE MOBILE (Esconde no Desktop) */}
+        {/* BOTÃO FLUTUANTE MOBILE */}
         {!isCartOpen && (
           <div className="fixed bottom-0 left-0 w-full p-4 bg-gradient-to-t from-[#F5F2EB] via-[#F5F2EB] to-transparent z-30 md:hidden pointer-events-none">
             <button
