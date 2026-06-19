@@ -14,7 +14,7 @@ import {
   onSnapshot,
   query,
   addDoc,
-  updateDoc,
+  setDoc,
   doc,
 } from "firebase/firestore";
 
@@ -443,16 +443,30 @@ export default function App() {
                 <div className="w-full flex flex-col gap-3 mt-auto">
                   {/* BOTÃO VERDE DO WHATSAPP */}
                   <button
-                    onClick={async () => {
-                      try {
-                        // 1. OBRIGA o site a avisar o Firebase e esperar a resposta "OK"
-                        if (createdOrderId) {
-                          await updateDoc(doc(db, "orders", createdOrderId), {
+                    onClick={() => {
+                      if (createdOrderId) {
+                        // 1. Forçamos a atualização com setDoc (mais estável no React)
+                        setDoc(
+                          doc(db, "orders", createdOrderId),
+                          {
                             whatsappEnviado: "solicitado",
+                          },
+                          { merge: true },
+                        )
+                          .then(() => {
+                            // 2. SÓ DEPOIS que o Firebase salva, nós vamos para o WhatsApp.
+                            // Usar window.location.href evita o bloqueio de pop-ups dos celulares!
+                            window.location.href =
+                              "https://wa.me/5517997541174";
+                          })
+                          .catch((erro) => {
+                            console.error("Erro interno ignorado:", erro);
+                            // Mesmo se a internet oscilar, libera o cliente pro WhatsApp
+                            window.location.href =
+                              "https://wa.me/5517997541174";
                           });
-                        }
 
-                        // 2. Limpa o carrinho e a tela de sucesso
+                        // 3. Limpa a tela imediatamente para o cliente ver que funcionou
                         setCart({});
                         setCustomerName("");
                         setCustomerPhone("");
@@ -462,14 +476,9 @@ export default function App() {
                         setCreatedOrderId(null);
                         setOrderSuccess(false);
                         setIsCartMobileOpen(false);
-
-                        // 3. Redireciona na MESMA ABA (Isso nunca é bloqueado pelo celular/navegador)
+                      } else {
+                        // Prevenção extra
                         window.location.href = "https://wa.me/5517997541174";
-                      } catch (error) {
-                        console.error("Erro ao avisar o bot:", error);
-                        alert(
-                          "Não foi possível redirecionar. Tente novamente.",
-                        );
                       }
                     }}
                     className="w-full bg-[#25D366] text-white py-4 rounded-xl font-bold text-sm shadow-lg hover:bg-[#20bd5a] transition-all flex items-center justify-center gap-2"
