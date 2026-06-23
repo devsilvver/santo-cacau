@@ -528,7 +528,7 @@ export default function App() {
                 <div className="w-full max-w-[320px] flex flex-col gap-3">
                   <a
                     // ===== LINK MODIFICADO PARA O NOVO FORMATO =====
-                    href={`https://wa.me/5517997921209?text=Ol%C3%A1!%20Acabei%20de%20fazer%20um%20pedido%20no%20site.%20Pode%20me%20enviar%20o%20resumo?%20Acompanhar%20pedido%20N%C2%B0${createdOrderNumber}`}
+                    href={`https://wa.me/5517997921209?text=Acompanhar%20pedido%20N%C2%B0${createdOrderNumber}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => {
