@@ -168,6 +168,7 @@ export default function App() {
   const handleFinalizeOrder = async () => {
     const rawPhone = customerPhone.replace(/\D/g, "");
 
+    // 1. Validações
     if (!customerName) {
       alert("Por favor, informe seu nome antes de finalizar o pedido!");
       return;
@@ -200,6 +201,7 @@ export default function App() {
       return;
     }
 
+    // 2. Prepara os dados uma única vez
     const [year, month, day] = deliveryDate.split("-");
     const formattedDate = `${day}/${month}/${year}`;
 
@@ -227,6 +229,7 @@ export default function App() {
       items: orderItems,
     };
 
+    // 3. Executa a Transação no Banco de Dados
     try {
       const contadorRef = doc(db, "metadata", "contador");
       const novoPedidoRef = doc(collection(db, "orders"));
@@ -236,40 +239,18 @@ export default function App() {
         
         let proximoNumero = 0; 
         
-        // Se o documento existir, pega o número e soma 1. Se não existir, começa em 0.
         if (contadorDoc.exists()) {
           const dados = contadorDoc.data();
           proximoNumero = (dados?.ultimoNumero ?? -1) + 1;
         }
 
-        // Atualiza o contador
+        // Atualiza o contador de pedidos
         transaction.set(contadorRef, { ultimoNumero: proximoNumero }, { merge: true });
 
-        // Prepara os dados do pedido
-        const [year, month, day] = deliveryDate.split("-");
-        const formattedDate = `${day}/${month}/${year}`;
-        const orderItems = Object.entries(cart).map(([id, quantity]) => {
-          const p = products.find((prod) => prod.id === id);
-          return { id, name: p?.name || "Produto", price: p?.price || 0, quantity };
-        });
-
-        let total = 0;
-        orderItems.forEach((item) => { total += item.price * item.quantity; });
-
-        // Salva o pedido
+        // Salva o pedido usando o orderData que criamos acima
         transaction.set(novoPedidoRef, {
-          customerName,
-          customerPhone: customerPhone.replace(/\D/g, ""),
-          deliveryType,
-          paymentMethod,
-          address: deliveryType === "entrega" ? address : "Retirada na loja",
-          deliveryDate: formattedDate,
-          total: total,
-          status: "Pendente",
-          whatsappEnviado: "nao_solicitado",
-          createdAt: Date.now(),
-          items: orderItems,
-          numeroPedido: proximoNumero // O número sequencial que o bot vai ler
+          ...orderData,
+          numeroPedido: proximoNumero
         });
 
         return proximoNumero;
