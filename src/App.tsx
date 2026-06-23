@@ -18,8 +18,6 @@ import {
   onSnapshot,
   query,
   addDoc,
-  updateDoc,
-  doc,
 } from "firebase/firestore";
 
 // ==========================================
