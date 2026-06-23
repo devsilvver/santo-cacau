@@ -228,28 +228,48 @@ export default function App() {
     };
 
     try {
-      // ===== LÓGICA ANTIQUEBRA COM TRANSACTION =====
       const contadorRef = doc(db, "metadata", "contador");
       const novoPedidoRef = doc(collection(db, "orders"));
 
       const numeroFinal = await runTransaction(db, async (transaction) => {
         const contadorDoc = await transaction.get(contadorRef);
-        let proximoNumero = 0; // Começa do zero
-
+        
+        let proximoNumero = 0; 
+        
+        // Se o documento existir, pega o número e soma 1. Se não existir, começa em 0.
         if (contadorDoc.exists()) {
           const dados = contadorDoc.data();
-          if (typeof dados?.ultimoNumero === "number") {
-            proximoNumero = dados.ultimoNumero + 1;
-          }
+          proximoNumero = (dados?.ultimoNumero ?? -1) + 1;
         }
 
-        // Atualiza a contagem no banco para o próximo cliente não pegar o mesmo número
+        // Atualiza o contador
         transaction.set(contadorRef, { ultimoNumero: proximoNumero }, { merge: true });
 
-        // Salva o pedido incluindo o novo parâmetro `numeroPedido`
+        // Prepara os dados do pedido
+        const [year, month, day] = deliveryDate.split("-");
+        const formattedDate = `${day}/${month}/${year}`;
+        const orderItems = Object.entries(cart).map(([id, quantity]) => {
+          const p = products.find((prod) => prod.id === id);
+          return { id, name: p?.name || "Produto", price: p?.price || 0, quantity };
+        });
+
+        let total = 0;
+        orderItems.forEach((item) => { total += item.price * item.quantity; });
+
+        // Salva o pedido
         transaction.set(novoPedidoRef, {
-          ...orderData,
-          numeroPedido: proximoNumero,
+          customerName,
+          customerPhone: customerPhone.replace(/\D/g, ""),
+          deliveryType,
+          paymentMethod,
+          address: deliveryType === "entrega" ? address : "Retirada na loja",
+          deliveryDate: formattedDate,
+          total: total,
+          status: "Pendente",
+          whatsappEnviado: "nao_solicitado",
+          createdAt: Date.now(),
+          items: orderItems,
+          numeroPedido: proximoNumero // O número sequencial que o bot vai ler
         });
 
         return proximoNumero;
@@ -258,8 +278,8 @@ export default function App() {
       setCreatedOrderNumber(numeroFinal);
       setOrderSuccess(true);
     } catch (error) {
-      console.error(error);
-      alert("Houve um erro ao registar a sua encomenda. Tente novamente.");
+      console.error("Erro na transação:", error);
+      alert("Houve um erro ao registrar a sua encomenda. Verifique sua conexão.");
     }
   };
 
