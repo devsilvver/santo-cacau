@@ -500,7 +500,7 @@ export default function App() {
 
                 <div className="w-full max-w-[320px] flex flex-col gap-3">
                   <a
-                    hhref="https://wa.me/5517997921209?text=Ol%C3%A1!%20Acabei%20de%20fazer%20um%20pedido%20no%20site%20e%20quero%20acompanhar."
+                    href="https://wa.me/5517997921209?text=Ol%C3%A1!%20Acabei%20de%20fazer%20um%20pedido%20no%20site%20e%20quero%20acompanhar."
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => {
