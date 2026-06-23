@@ -9,7 +9,7 @@ import {
   QrCode,
   CreditCard,
   Banknote,
-  Trash2 // <-- NOVO ÍCONE IMPORTADO
+  Trash2
 } from "lucide-react";
 import { initializeApp } from "firebase/app";
 import {
@@ -17,7 +17,8 @@ import {
   collection,
   onSnapshot,
   query,
-  addDoc,
+  doc, // NOVO IMPORT
+  runTransaction // NOVO IMPORT
 } from "firebase/firestore";
 
 // ==========================================
@@ -82,7 +83,9 @@ export default function App() {
   const [address, setAddress] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
   const [orderSuccess, setOrderSuccess] = useState(false);
-  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
+  
+  // Modificado: Agora guardamos o NÚMERO sequencial do pedido, e não mais a ID estranha
+  const [createdOrderNumber, setCreatedOrderNumber] = useState<number | null>(null);
 
   // Fecha a lista expandida se o usuário fechar a sacola
   useEffect(() => {
@@ -225,8 +228,34 @@ export default function App() {
     };
 
     try {
-      const docRef = await addDoc(collection(db, "orders"), orderData);
-      setCreatedOrderId(docRef.id);
+      // ===== LÓGICA ANTIQUEBRA COM TRANSACTION =====
+      const contadorRef = doc(db, "metadata", "contador");
+      const novoPedidoRef = doc(collection(db, "orders"));
+
+      const numeroFinal = await runTransaction(db, async (transaction) => {
+        const contadorDoc = await transaction.get(contadorRef);
+        let proximoNumero = 0; // Começa do zero
+
+        if (contadorDoc.exists()) {
+          const dados = contadorDoc.data();
+          if (typeof dados?.ultimoNumero === "number") {
+            proximoNumero = dados.ultimoNumero + 1;
+          }
+        }
+
+        // Atualiza a contagem no banco para o próximo cliente não pegar o mesmo número
+        transaction.set(contadorRef, { ultimoNumero: proximoNumero }, { merge: true });
+
+        // Salva o pedido incluindo o novo parâmetro `numeroPedido`
+        transaction.set(novoPedidoRef, {
+          ...orderData,
+          numeroPedido: proximoNumero,
+        });
+
+        return proximoNumero;
+      });
+
+      setCreatedOrderNumber(numeroFinal);
       setOrderSuccess(true);
     } catch (error) {
       console.error(error);
@@ -432,7 +461,7 @@ export default function App() {
         >
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#B58E38] opacity-10 rounded-bl-full pointer-events-none" />
 
-          {/* CABEÇALHO DO MODAL (Com Botão Lixeira) */}
+          {/* CABEÇALHO DO MODAL */}
           <div className="flex justify-between items-center mb-6 shrink-0 relative z-10 border-b border-white/10 pb-6">
             <div className="flex items-center gap-3">
               <ShoppingBag className="w-6 h-6 text-[#B58E38]" />
@@ -462,7 +491,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Oculta scrollbars NATIVAMENTE mantendo o scroll funcionando apenas onde deve */}
           <div className="flex-1 overflow-y-auto pr-1 md:pr-0 mb-4 relative z-10 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {orderSuccess ? (
               <div className="h-full flex flex-col items-center justify-center text-center gap-4 text-white animate-in fade-in duration-500 pb-4">
@@ -498,13 +526,11 @@ export default function App() {
 
                 <div className="w-full max-w-[320px] flex flex-col gap-3">
                   <a
-                    // 1. Colocamos o ID do pedido magicamente dentro do texto do WhatsApp
-                    href={`https://wa.me/5517997921209?text=Ol%C3%A1!%20Acabei%20de%20fazer%20um%20pedido%20no%20site.%20Pode%20me%20enviar%20o%20resumo?%20%5BPedido:%20${createdOrderId}%5D`}
+                    // ===== LINK MODIFICADO PARA O NOVO FORMATO =====
+                    href={`https://wa.me/5517997921209?text=Ol%C3%A1!%20Acabei%20de%20fazer%20um%20pedido%20no%20site.%20Pode%20me%20enviar%20o%20resumo?%20Acompanhar%20pedido%20N%C2%B0${createdOrderNumber}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => {
-                      // 2. Removemos o comando que acordava o bot (updateDoc). 
-                      // Agora o site não faz mais nada além de limpar o carrinho.
                       setTimeout(() => {
                         setCart({});
                         setCustomerName("");
@@ -512,7 +538,7 @@ export default function App() {
                         setAddress("");
                         setDeliveryDate("");
                         setPaymentMethod("PIX");
-                        setCreatedOrderId(null);
+                        setCreatedOrderNumber(null);
                         setOrderSuccess(false);
                         setIsCartOpen(false);
                       }, 500);
@@ -530,7 +556,7 @@ export default function App() {
                       setAddress("");
                       setDeliveryDate("");
                       setPaymentMethod("PIX");
-                      setCreatedOrderId(null);
+                      setCreatedOrderNumber(null);
                       setOrderSuccess(false);
                       setIsCartOpen(false);
                     }}
@@ -543,7 +569,7 @@ export default function App() {
             ) : (
               <div className="md:grid md:grid-cols-2 md:gap-8 h-full">
                 
-                {/* LADO ESQUERDO: OS ITENS (COM ALTURA TRAVADA E SCROLL INVISÍVEL) */}
+                {/* LADO ESQUERDO: OS ITENS */}
                 <div className="flex flex-col gap-2 mb-8 md:mb-0">
                   <h3 className="hidden md:flex text-[#B58E38] font-bold text-xs uppercase tracking-widest mb-2 border-b border-white/10 pb-2 shrink-0">
                     Itens na Sacola
@@ -600,7 +626,7 @@ export default function App() {
                   )}
                 </div>
 
-                {/* LADO DIREITO: O FORMULÁRIO (TOTALMENTE ESTÁTICO) */}
+                {/* LADO DIREITO: O FORMULÁRIO */}
                 <div className="flex flex-col gap-4">
                   <h3 className="hidden md:flex text-[#B58E38] font-bold text-xs uppercase tracking-widest mb-2 border-b border-white/10 pb-2 shrink-0">
                     Detalhes do Pedido
@@ -684,7 +710,7 @@ export default function App() {
                     </button>
                   </div>
 
-                  {/* ALTURAS TRAVADAS (h-[88px]) PARA EVITAR QUEBRA DE LAYOUT */}
+                  {/* ALTURAS TRAVADAS PARA EVITAR QUEBRA DE LAYOUT */}
                   {deliveryType === "entrega" ? (
                     <textarea
                       placeholder="Endereço (Rua, Número, Bairro...)"
