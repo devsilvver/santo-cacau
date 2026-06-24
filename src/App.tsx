@@ -9,7 +9,7 @@ import {
   QrCode,
   CreditCard,
   Banknote,
-  Trash2
+  Trash2,
 } from "lucide-react";
 import { initializeApp } from "firebase/app";
 import {
@@ -18,7 +18,7 @@ import {
   onSnapshot,
   query,
   doc, // NOVO IMPORT
-  runTransaction // NOVO IMPORT
+  runTransaction, // NOVO IMPORT
 } from "firebase/firestore";
 
 // ==========================================
@@ -83,9 +83,13 @@ export default function App() {
   const [address, setAddress] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
   const [orderSuccess, setOrderSuccess] = useState(false);
-  
+
   // Modificado: Agora guardamos o NÚMERO sequencial do pedido, e não mais a ID estranha
-  const [createdOrderNumber, setCreatedOrderNumber] = useState<number | null>(null);
+  const [createdOrderNumber, setCreatedOrderNumber] = useState<number | null>(
+    null,
+  );
+
+  const [changeForValue, setChangeForValue] = useState("");
 
   // Fecha a lista expandida se o usuário fechar a sacola
   useEffect(() => {
@@ -110,7 +114,10 @@ export default function App() {
   }, [cart]);
 
   const formatPrice = (price: number) => {
-    return price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    return price.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
   };
 
   const updateCart = (productId: string, delta: number) => {
@@ -129,7 +136,7 @@ export default function App() {
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, "");
     if (value.length > 11) value = value.slice(0, 11);
-    
+
     let formatted = value;
     if (value.length > 2) {
       formatted = `(${value.slice(0, 2)}) ${value.slice(2)}`;
@@ -196,7 +203,7 @@ export default function App() {
       alert(
         isLargeOrder
           ? "Para encomendas acima de 50 brigadeiros, o prazo mínimo é de 1 semana."
-          : "Data selecionada é inválida."
+          : "Data selecionada é inválida.",
       );
       return;
     }
@@ -215,6 +222,24 @@ export default function App() {
       total += item.price * item.quantity;
     });
 
+    // --- NOVA LÓGICA DE TROCO ---
+    let needChange = false;
+    let changeFor = 0;
+    let changeAmount = 0;
+
+    if (paymentMethod === "Dinheiro" && changeForValue.trim() !== "") {
+      changeFor = parseFloat(changeForValue.replace(",", "."));
+      if (changeFor < total) {
+        alert(
+          `O valor para troco (${formatPrice(changeFor)}) não pode ser menor que o total do pedido (${formatPrice(total)}).`,
+        );
+        return;
+      }
+      needChange = true;
+      changeAmount = changeFor - total;
+    }
+    // ----------------------------
+
     const orderData = {
       customerName,
       customerPhone: rawPhone,
@@ -227,6 +252,9 @@ export default function App() {
       whatsappEnviado: "nao_solicitado",
       createdAt: Date.now(),
       items: orderItems,
+      needChange,
+      changeFor,
+      changeAmount,
     };
 
     // 3. Executa a Transação no Banco de Dados
@@ -236,21 +264,25 @@ export default function App() {
 
       const numeroFinal = await runTransaction(db, async (transaction) => {
         const contadorDoc = await transaction.get(contadorRef);
-        
-        let proximoNumero = 0; 
-        
+
+        let proximoNumero = 0;
+
         if (contadorDoc.exists()) {
           const dados = contadorDoc.data();
           proximoNumero = (dados?.ultimoNumero ?? -1) + 1;
         }
 
         // Atualiza o contador de pedidos
-        transaction.set(contadorRef, { ultimoNumero: proximoNumero }, { merge: true });
+        transaction.set(
+          contadorRef,
+          { ultimoNumero: proximoNumero },
+          { merge: true },
+        );
 
         // Salva o pedido usando o orderData que criamos acima
         transaction.set(novoPedidoRef, {
           ...orderData,
-          numeroPedido: proximoNumero
+          numeroPedido: proximoNumero,
         });
 
         return proximoNumero;
@@ -260,7 +292,9 @@ export default function App() {
       setOrderSuccess(true);
     } catch (error) {
       console.error("Erro na transação:", error);
-      alert("Houve um erro ao registrar a sua encomenda. Verifique sua conexão.");
+      alert(
+        "Houve um erro ao registrar a sua encomenda. Verifique sua conexão.",
+      );
     }
   };
 
@@ -282,11 +316,12 @@ export default function App() {
     return Object.values(cart).reduce((sum, qty) => sum + qty, 0);
   }, [cart]);
 
-  const cartEntries = Object.entries(cart).filter(([id]) => products.some(p => p.id === id));
+  const cartEntries = Object.entries(cart).filter(([id]) =>
+    products.some((p) => p.id === id),
+  );
 
   return (
     <div className="w-full min-h-screen bg-[#F5F2EB] flex flex-col font-sans text-[#2A1610] relative">
-      
       {/* BACKGROUND DO MODAL */}
       {isCartOpen && (
         <div
@@ -318,7 +353,6 @@ export default function App() {
       {/* ÁREA PRINCIPAL DA LOJA */}
       <main className="flex-1 flex flex-col p-4 md:p-8 md:pt-4 gap-8 max-w-[1400px] mx-auto w-full">
         <section className="w-full flex flex-col gap-6 md:gap-8">
-          
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0">
             <div>
               <h2 className="text-4xl font-serif text-[#2A1610] italic">
@@ -368,7 +402,9 @@ export default function App() {
                 className="hidden md:flex items-center gap-3 bg-[#2A1610] text-white px-6 py-3.5 rounded-full font-bold shadow-lg hover:bg-[#1A0D09] transition-all hover:scale-105 shrink-0"
               >
                 <ShoppingBag size={20} className="text-[#B58E38]" />
-                <span className="uppercase tracking-widest text-xs">Sacola</span>
+                <span className="uppercase tracking-widest text-xs">
+                  Sacola
+                </span>
                 {cartItemsCount > 0 && (
                   <span className="bg-[#B58E38] text-white text-[11px] w-6 h-6 flex items-center justify-center rounded-full shadow-inner">
                     {cartItemsCount}
@@ -392,25 +428,31 @@ export default function App() {
                   >
                     <div className="w-20 h-20 shrink-0 bg-[#F5F2EB] rounded-full flex items-center justify-center shadow-inner relative overflow-hidden">
                       {product.imageUrl ? (
-                        <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
-                        <span className="text-3xl">{product.emoji || "🍫"}</span>
+                        <span className="text-3xl">
+                          {product.emoji || "🍫"}
+                        </span>
                       )}
                     </div>
-                    <div className="flex-1 flex flex-col justify-between py-1">
-                      <div>
-                        <h3 className="font-serif font-bold text-lg text-[#2A1610] group-hover:text-[#B58E38] transition-colors leading-tight mb-1">
+                    <div className="flex-1 flex flex-col py-1 min-w-0">
+                      <div className="mb-1">
+                        <h3 className="font-serif font-bold text-[16px] md:text-lg text-[#2A1610] group-hover:text-[#B58E38] transition-colors leading-tight mb-1 break-words">
                           {product.name}
                         </h3>
                         <p className="text-[11px] text-[#2A1610]/60 leading-relaxed line-clamp-2">
                           {product.description}
                         </p>
                       </div>
-                      <div className="flex justify-between items-center mt-3">
-                        <span className="text-[#B58E38] font-bold text-lg">
+                      <div className="flex justify-between items-end mt-auto gap-2 pt-2">
+                        <span className="text-[#B58E38] font-bold text-base md:text-lg shrink-0">
                           {formatPrice(product.price)}
                         </span>
-                        <div className="flex items-center bg-[#F5F2EB] rounded-full p-1 border border-[#B58E38]/10">
+                        <div className="flex items-center bg-[#F5F2EB] rounded-full p-1 border border-[#B58E38]/10 shrink-0">
                           <button
                             onClick={() => updateCart(product.id, -1)}
                             className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white text-[#2A1610] transition-colors disabled:opacity-30"
@@ -418,8 +460,11 @@ export default function App() {
                           >
                             -
                           </button>
-                          <span className={`w-6 text-center font-mono text-sm ${cart[product.id] ? "text-[#2A1610] font-bold" : "text-[#2A1610]/40"}`}>
-                            {cart[product.id]?.toString().padStart(2, "0") || "00"}
+                          <span
+                            className={`w-6 text-center font-mono text-sm ${cart[product.id] ? "text-[#2A1610] font-bold" : "text-[#2A1610]/40"}`}
+                          >
+                            {cart[product.id]?.toString().padStart(2, "0") ||
+                              "00"}
                           </span>
                           <button
                             onClick={() => updateCart(product.id, 1)}
@@ -454,9 +499,10 @@ export default function App() {
           /* Estilo Desktop */
           md:inset-auto md:top-1/2 md:left-1/2 md:h-auto md:max-h-[90vh] md:w-[850px] md:rounded-[32px] md:p-8
           
-          ${isCartOpen 
-            ? "translate-y-0 md:-translate-x-1/2 md:-translate-y-1/2 md:opacity-100 md:scale-100 md:pointer-events-auto" 
-            : "translate-y-full md:-translate-x-1/2 md:-translate-y-1/2 md:opacity-0 md:scale-95 md:pointer-events-none"
+          ${
+            isCartOpen
+              ? "translate-y-0 md:-translate-x-1/2 md:-translate-y-1/2 md:opacity-100 md:scale-100 md:pointer-events-auto"
+              : "translate-y-full md:-translate-x-1/2 md:-translate-y-1/2 md:opacity-0 md:scale-95 md:pointer-events-none"
           }
         `}
         >
@@ -514,13 +560,18 @@ export default function App() {
                         17997921209
                       </p>
                       <p className="text-xs text-white/60 leading-relaxed">
-                        Faça o pagamento e envie o comprovante no nosso WhatsApp para iniciarmos a produção.
+                        Faça o pagamento e envie o comprovante no nosso WhatsApp
+                        para iniciarmos a produção.
                       </p>
                     </div>
                   ) : (
                     <p className="text-base text-white/70 leading-relaxed max-w-[300px] mx-auto mb-6">
-                      Sua encomenda já está no nosso sistema. O pagamento será feito na{" "}
-                      <span className="text-white font-bold">{deliveryType === "entrega" ? "entrega" : "retirada"}</span>.
+                      Sua encomenda já está no nosso sistema. O pagamento será
+                      feito na{" "}
+                      <span className="text-white font-bold">
+                        {deliveryType === "entrega" ? "entrega" : "retirada"}
+                      </span>
+                      .
                     </p>
                   )}
                 </div>
@@ -542,11 +593,14 @@ export default function App() {
                         setCreatedOrderNumber(null);
                         setOrderSuccess(false);
                         setIsCartOpen(false);
+                        setChangeForValue("");
                       }, 500);
                     }}
                     className="w-full bg-[#25D366] text-white py-4 rounded-xl font-bold text-sm shadow-lg hover:bg-[#20bd5a] transition-all flex items-center justify-center gap-2 cursor-pointer text-center inline-flex"
                   >
-                    {paymentMethod === "PIX" ? "Enviar comprovante" : "Acompanhar no WhatsApp"}
+                    {paymentMethod === "PIX"
+                      ? "Enviar comprovante"
+                      : "Acompanhar no WhatsApp"}
                   </a>
 
                   <button
@@ -569,44 +623,50 @@ export default function App() {
               </div>
             ) : (
               <div className="md:grid md:grid-cols-2 md:gap-8 h-full">
-                
                 {/* LADO ESQUERDO: OS ITENS */}
                 <div className="flex flex-col gap-2 mb-8 md:mb-0">
                   <h3 className="hidden md:flex text-[#B58E38] font-bold text-xs uppercase tracking-widest mb-2 border-b border-white/10 pb-2 shrink-0">
                     Itens na Sacola
                   </h3>
-                  
+
                   {cartEntries.length === 0 ? (
                     <div className="flex-1 flex items-center justify-center text-center text-white/30 text-sm font-serif italic py-10 md:py-20">
-                      A sua sacola está vazia.<br />Adicione as nossas delícias!
+                      A sua sacola está vazia.
+                      <br />
+                      Adicione as nossas delícias!
                     </div>
                   ) : (
                     <>
-                      <div className={`transition-all duration-300 ease-in-out pr-1 ${
-                        showAllItems 
-                          ? "max-h-[240px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]" 
-                          : "max-h-[140px] overflow-hidden"
-                      }`}>
+                      <div
+                        className={`transition-all duration-300 ease-in-out pr-1 ${
+                          showAllItems
+                            ? "max-h-[240px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                            : "max-h-[140px] overflow-hidden"
+                        }`}
+                      >
                         <div className="flex flex-col gap-3">
                           {cartEntries
                             .slice(0, showAllItems ? undefined : 3)
                             .map(([id, quantity]) => {
-                            const product = products.find((p) => p.id === id);
-                            if (!product) return null;
-                            return (
-                              <div key={id} className="flex justify-between items-center text-sm pb-3 border-b border-white/5 shrink-0">
-                                <span className="text-white/90 flex-1 pr-2 truncate">
-                                  <span className="font-mono text-[#B58E38] font-bold mr-3 bg-[#B58E38]/10 px-2 py-1 rounded-md">
-                                    {quantity}x
+                              const product = products.find((p) => p.id === id);
+                              if (!product) return null;
+                              return (
+                                <div
+                                  key={id}
+                                  className="flex justify-between items-center text-sm pb-3 border-b border-white/5 shrink-0"
+                                >
+                                  <span className="text-white/90 flex-1 pr-2 truncate">
+                                    <span className="font-mono text-[#B58E38] font-bold mr-3 bg-[#B58E38]/10 px-2 py-1 rounded-md">
+                                      {quantity}x
+                                    </span>
+                                    {product.name}
                                   </span>
-                                  {product.name}
-                                </span>
-                                <span className="font-bold text-[#B58E38] whitespace-nowrap">
-                                  {formatPrice(product.price * quantity)}
-                                </span>
-                              </div>
-                            );
-                          })}
+                                  <span className="font-bold text-[#B58E38] whitespace-nowrap">
+                                    {formatPrice(product.price * quantity)}
+                                  </span>
+                                </div>
+                              );
+                            })}
                         </div>
                       </div>
 
@@ -616,11 +676,13 @@ export default function App() {
                           onClick={() => setShowAllItems(!showAllItems)}
                           className="w-full py-2.5 mt-2 text-[10px] md:text-[11px] uppercase tracking-widest font-bold rounded-xl transition-all border border-[#B58E38]/20 text-[#B58E38] hover:bg-[#B58E38]/10 flex items-center justify-center gap-2 shrink-0"
                         >
-                          {showAllItems 
-                            ? "Ocultar Itens" 
-                            : `Ver todos os ${cartEntries.length} itens`
-                          }
-                          <ChevronDown size={14} className={`transition-transform ${showAllItems ? "rotate-180" : ""}`} />
+                          {showAllItems
+                            ? "Ocultar Itens"
+                            : `Ver todos os ${cartEntries.length} itens`}
+                          <ChevronDown
+                            size={14}
+                            className={`transition-transform ${showAllItems ? "rotate-180" : ""}`}
+                          />
                         </button>
                       )}
                     </>
@@ -657,7 +719,11 @@ export default function App() {
                     <div className="grid grid-cols-3 gap-2">
                       {[
                         { id: "PIX", label: "PIX", Icon: QrCode },
-                        { id: "Cartão de Crédito/Débito", label: "Cartão", Icon: CreditCard },
+                        {
+                          id: "Cartão de Crédito/Débito",
+                          label: "Cartão",
+                          Icon: CreditCard,
+                        },
                         { id: "Dinheiro", label: "Dinheiro", Icon: Banknote },
                       ].map((method) => (
                         <button
@@ -678,6 +744,23 @@ export default function App() {
                     </div>
                   </div>
 
+                  {/* NOVO: CAMPO DE TROCO CONDICIONAL */}
+                  {paymentMethod === "Dinheiro" && (
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col gap-2 w-full shrink-0 animate-in fade-in duration-300">
+                      <label className="text-[10px] uppercase font-bold text-[#B58E38] tracking-widest flex items-center gap-1.5">
+                        Precisa de troco para quanto?
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Ex: 50 (Deixe em branco se não precisar)"
+                        value={changeForValue}
+                        onChange={(e) => setChangeForValue(e.target.value)}
+                        className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-sm focus:border-[#B58E38] outline-none text-white placeholder:text-white/40 transition-all w-full shrink-0"
+                      />
+                    </div>
+                  )}
+
                   <div className="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col gap-2 w-full shrink-0">
                     <label className="text-[10px] uppercase font-bold text-[#B58E38] tracking-widest flex items-center gap-1.5">
                       <CalendarDays size={12} /> Data Desejada
@@ -691,7 +774,8 @@ export default function App() {
                     />
                     {isLargeOrder && (
                       <span className="text-[10px] text-yellow-500/90 leading-tight mt-1 border-t border-white/10 pt-2">
-                        ⚠️ Acima de 50 brigadeiros, o prazo mínimo é de 1 semana.
+                        ⚠️ Acima de 50 brigadeiros, o prazo mínimo é de 1
+                        semana.
                       </span>
                     )}
                   </div>
@@ -723,7 +807,9 @@ export default function App() {
                     <div className="bg-[#B58E38]/10 rounded-xl p-3 flex flex-col items-center justify-center text-xs text-white/80 text-center border border-[#B58E38]/20 h-[88px] w-full overflow-hidden shrink-0">
                       <span className="block mb-1">Retirada na loja:</span>
                       <strong className="font-semibold text-[#B58E38] text-[11px] md:text-xs leading-snug whitespace-normal break-words px-2">
-                        Rua Rosa Rita dos Santos Sabadotto, 3828<br/>Monte Verde - Votuporanga
+                        Rua Rosa Rita dos Santos Sabadotto, 3828
+                        <br />
+                        Monte Verde - Votuporanga
                       </strong>
                     </div>
                   )}
